@@ -491,6 +491,96 @@ Ghana, Jordan, Kuwait, Lebanon, Morocco, Mali, Malaysia, Nigeria, Nicaragua, Pak
 Senegal, Taiwan, Uganda and Uzbekistan, which is 18 of the 122 eligible countries. Resolving
 the inconsistency in the inherited audit is a precondition for the record condition of Stage C.
 
+### 7.5 What the second pass of Stage A measured — 2026-09-29
+
+The second pass ran the same 200 calls on Claude Haiku 4.5 under instrument version v1 and
+record version 2, recorded in `runs/stage_a_v1.jsonl`. Every figure below is read from that
+ledger, and every comparison is against `runs/stage_a.jsonl`, which holds instrument version v0
+against the uncorrected record.
+
+**The rewritten anchors broke the ladder.** The holistic wording returned 17 distinct scores
+across 100 calls where version v0 returned nine, the highest score rose from 28.0 to 38.5, and
+86 of the 100 scores carry a decimal part where version v0 returned no fractional score at all.
+Ties among cell means fell from four groups to one. Version v0 tied Barbados with Ghana at 5.00
+and tied Hong Kong with India at 15.00 under training data alone, and version v1 ties no pair
+under training data alone. The one remaining tie is France with India at 28.50 under the record
+condition at temperature zero.
+
+**Every holistic call returned the score as a string, which is a defect in the version v1
+wording and not a property of the model.** Version v1 asked for a "number from 0 to 100, to one
+decimal place", and all 100 holistic calls returned a value of the form `"35.2"` in quotation
+marks. Version v0 asked for a "number from 0 to 100" and returned a JSON number in all 100
+holistic calls. Asking for a fixed number of decimal places asks for a format, and a format with
+a guaranteed decimal place is something a model writes as text. The parse rule converts a numeric
+string and names the conversion, so all 100 scores are usable and no score is affected. The cost
+falls on a figure the study reports, because the count of responses that followed the schema
+exactly fell from 194 of 200 under version v0 to 85 of 200 under version v1. A schema-compliance
+rate of 42.5 per cent driven by the wording of the prompt would describe the instrument and not
+the model, so version v2 asks for the type in the schema and asks for the precision in the anchor
+paragraph. Everything else in version v1 carries over unchanged, so a comparison of version v1
+with version v2 isolates the effect of the score field.
+
+**The itemised wording returned 15 conversions, against five under version v0, and those
+conversions are the model's behaviour.** The itemised schema asks for an integer count and for
+`true`, `false` or `null`, and asks for no format, so a count returned as `"193"` and a flag
+returned as `"true"` are the model's choice. One India response at temperature one returned all
+four of `strategy_released`, `strategy_year`, `bills_passed` and `legislative_mentions` in
+quotation marks. How often a model returns the right answer in the wrong type is one of the
+properties this study measures, and the itemised figure measures it while the holistic figure
+under version v1 does not.
+
+**No call failed to parse.** All 200 responses parsed to `ok`, against 194 first recorded and 199
+after re-reading under parser version 2 in the first pass. The single malformed JSON object of
+the first pass did not recur. Both wordings returned 100 of 100 at both temperatures, every call
+ended with a stop reason of `end_turn`, and the pass took 300.5 seconds, 104,680 input tokens and
+17,584 output tokens, against 298.0 seconds, 93,100 input tokens and 16,941 output tokens for the
+first pass. The longer anchor paragraph and the corrected record together raised input tokens by
+12.4 per cent, so the projection for Stage C in section 7.4 rises by about the same fraction.
+
+**Temperature one now produces replicate variation in every holistic cell.** All 10 holistic
+cells at temperature one returned more than one score, against seven of 10 under version v0, and
+the mean within-cell standard deviation rose from 1.689 to 3.105 points with a largest cell
+standard deviation of 5.112. Temperature zero remains deterministic in the scored value, with a
+standard deviation of zero in all 10 holistic cells under both versions. Section 4.5 is therefore
+supported on the wider scale as well as on the ladder, and the generalisability analysis has a
+replicate variance component in every cell rather than in seven of 10.
+
+**Supplying the corrected record reproduced the ordering of the count of national action
+exactly.** The count of national action orders the five pilot countries France 60.32, India
+49.83, Ghana 46.24, Hong Kong 18.08, Barbados 1.60. Under the record condition the model ordered
+France 30.50, India 28.90, Ghana 19.50, Hong Kong 15.01, Barbados 4.86, which is a Spearman
+correlation of 1.0000 on five countries, exact two-sided p of 0.0167 over all 120 permutations.
+Version v0 under the record condition placed Ghana below Hong Kong, for a Spearman correlation of
+0.8721 and an exact p of 0.1000. Under training data alone version v1 reached 0.9000 against
+0.8208 for version v0, and both versions place Hong Kong above Ghana, so scoring from training
+data alone still misplaces Ghana.
+
+**The record condition of the second pass cannot separate the wording from the correction, and
+the training condition can.** The second pass changed the instrument wording and the record
+version together, so the improvement under the record condition has two causes acting at once. A
+training prompt carries no record, so the training condition isolates the wording, and the
+wording alone lifted the Spearman correlation from 0.8208 to 0.9000 without changing the sequence
+of the five countries. The movement of Ghana is identifiable on its own, because Ghana is the only
+one of the five pilot countries among the 18 corrected. Ghana gained 11.80 points under the record
+condition, from 7.70 to 19.50, where no other pilot country moved more than 3.10 points, and
+Ghana's rendered record changed from no release recorded to a national AI strategy released. The
+corrected record is what moved Ghana into the rank the count of national action gives Ghana.
+
+**Supplying the record removed every low-confidence answer, and the wider scale lowered
+confidence under training data alone.** Under training data alone version v1 returned 20 low, 77
+medium and three high, against 20 low, 59 medium and 20 high for version v0. Under the record
+condition version v1 returned no low, 49 medium and 51 high, against no low, 33 medium and 62
+high for version v0. A wider scale with a named middle point therefore lowered the count of
+high-confidence answers in both conditions, from 20 to three under training data alone and from
+62 to 51 under the record condition.
+
+**Five countries is too few to carry a rank claim, and Stage C is what tests the ordering.** A
+Spearman correlation of 1.0000 on five countries is one of 120 orderings and reaches an exact p
+of 0.0167 only because no closer agreement exists. The figure is reported as evidence that the
+instrument and the corrected record work together as intended, and not as a measurement of
+agreement between a model score and the count of national action. Stage C scores all 122
+countries and is what tests the ordering.
+
 ---
 
 ## 8. Deposit
@@ -516,4 +606,6 @@ with the existing deposit without a schema change.
 | 2026-09-29 | Section 4.5 closed as FIXED at temperature one with five replicates, decided together because the scored value did not vary at all at temperature zero. Section 4.4 stays OPEN for the choice between the two wordings, and the holistic anchors were rewritten to version v1, which names a middle point of the scale, asks for one decimal place and drops the instruction to use the whole range. The Sentience Readiness Index scores its own 30 countries between 14.25 and 49.00 on a scale running to 100, so an instruction to spread scores across the whole range asks a model for something the audited practice does not do. |
 | 2026-09-29 | Correction to two figures this document previously carried. Section 7.4 had recorded temperature zero as exactly deterministic, and the ledger shows the scored value identical in all 20 cells while the response text differed in three of the 20 cells, so the claim now names the value and not the model. The earlier count of calls at temperature zero was also wrong at 50 and is 100. |
 | 2026-09-29 | Operational only, no design choice touched. `scoring/config.py` gained `RECORD_VERSION` and `CORRECTION_POLICY`, both recorded on every ledger row and both inside the template hash, so a run resumed after a change to the record renderer cannot treat a row produced under the earlier record as already done. The change invalidates the 200 Stage A rows written under instrument version v0, which stay in the ledger as the record of the v0 wording. |
+| 2026-09-29 | Second pass of Stage A ran in full, 200 calls on Claude Haiku 4.5 under instrument version v1 and record version 2, recorded in `runs/stage_a_v1.jsonl`. Section 7.5 added, holding what the 200 calls measured. The rewritten anchors broke the ladder, returning 17 distinct scores against nine and a highest score of 38.5 against 28.0, and every holistic cell at temperature one now varies across replicates against seven of 10 before. Under the record condition the model reproduced the ordering of the corrected count of national action exactly across the five pilot countries, and Ghana, the only corrected country among the five, gained 11.80 points where no other pilot country moved more than 3.10. |
+| 2026-09-29 | Instrument version v2. Version v1 asked for the holistic score "to one decimal place" and all 100 holistic calls returned the score in quotation marks, where version v0 returned a JSON number in all 100. Asking for a fixed number of decimal places asks for a format, and a format with a guaranteed decimal place is written as text. No score is affected, because the parse rule converts a numeric string and names the conversion, but the count of responses that followed the schema exactly fell from 194 of 200 to 85 of 200, and a compliance rate driven by the wording of the prompt would describe the instrument and not the model. Version v2 asks for a JSON number without quotation marks in the schema and asks for a fractional score in the anchor paragraph, and changes nothing else, so a comparison of version v1 with version v2 isolates the score field. |
 | 2026-09-29 | Documentation only, no design choice touched. `RESUME.md` added at the repository root, holding the state of the work, every decision taken with the reason, the standing rules for working on the project, the commands, the open questions and a dated session log, so that a Claude Code session on the Sentient Futures workspace account can read the project from the beginning and continue the work. `README.md` brought up to date, with `scoring/corrections.py` added to the layout table, the correction check and the reparse command added to the order of work, and the contamination guarantee corrected to state that both counts of national action are withheld from every prompt. |

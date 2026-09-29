@@ -42,6 +42,30 @@ whole range asks the model for something the practice under audit does not do. H
 far a model compresses the scale is one of the properties this study measures, and
 an instruction to spread the scores would measure compliance with the instruction
 instead.
+
+WHY THE SCORE FIELD CHANGED AGAIN AT v2
+---------------------------------------
+Version v1 asked for the score as a "number from 0 to 100, to one decimal place",
+and on 200 calls to Claude Haiku 4.5 on 2026-09-29, recorded in
+runs/stage_a_v1.jsonl, every one of the 100 holistic calls returned the score as a
+string, for example "35.2" rather than 35.2. Version v0 had returned a JSON number
+in all 100 holistic calls, so the phrase "to one decimal place" is what produced a
+string. Asking for a fixed number of decimal places asks for a format, and a format
+with a guaranteed number of decimal places is something a model writes as text.
+
+The conversion costs nothing in the score, because the parse rule converts a
+numeric string and names the conversion, so every v1 score is usable. The cost
+falls on a figure the study reports. The count of responses that followed the
+schema exactly fell from 194 of 200 under version v0 to 85 of 200 under version
+v1, and the fall is caused by the wording of the prompt rather than by anything the
+model did poorly. Reporting a schema-compliance rate that the instrument itself
+drove to 42.5 per cent would describe the instrument and not the model.
+
+Version v2 therefore asks for the type in the schema and asks for the precision in
+the anchor paragraph, and names the type in words a JSON writer acts on. The scale,
+the middle anchor and the absence of an instruction to use the whole range all carry
+over from version v1 unchanged, so a comparison of version v1 with version v2
+isolates the effect of the score field.
 """
 
 from __future__ import annotations
@@ -52,7 +76,7 @@ import json
 from . import config as C
 from . import record as R
 
-VERSION = "v1"
+VERSION = "v2"
 
 CONSTRUCT = (
     "preparation by a national government for the possibility that AI systems "
@@ -68,7 +92,7 @@ SYSTEM = (
 )
 
 HOLISTIC_SCHEMA = {
-    "score": "number from 0 to 100, to one decimal place",
+    "score": "a JSON number between 0 and 100, written without quotation marks",
     "confidence": "one of low, medium, high",
     "justification": "at most 40 words",
 }
@@ -97,8 +121,9 @@ means the country has published a national strategy and has established at least
 one public institution with a standing remit over artificial intelligence, and has \
 passed no law addressing the moral status of AI systems. A score of 100 means the \
 country already has in force a comprehensive legal and institutional framework \
-that recognises and protects an AI system warranting moral consideration. Report \
-the score to one decimal place."""
+that recognises and protects an AI system warranting moral consideration. A \
+fractional score is allowed, so give the score a decimal part wherever a whole \
+number would hide a difference between two countries."""
 
 _ITEMISED = """Report what one country has recorded on artificial intelligence \
 governance.
