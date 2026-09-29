@@ -1,0 +1,28 @@
+ADMINISTRATIVE RECORD FOR DENMARK (DNK)
+
+Responsible AI governance:
+  - Global Index on Responsible AI, overall score: not recorded
+  - Global Index on Responsible AI, government actions pillar: not recorded
+  - Global Index on Responsible AI, government frameworks pillar: not recorded
+  - Global Index on Responsible AI, non-state actors pillar: not recorded
+  - Global Index on Responsible AI, human rights and AI dimension: not recorded
+  - Global Index on Responsible AI, responsible AI capacities dimension: not recorded
+  - Global Index on Responsible AI, responsible AI governance dimension: not recorded
+
+Legislation:
+  - AI-related bills passed into law, cumulative 2016 to 2024: 0
+  - AI-related bills passed into law, latest single year reported: 0
+  - Mentions of AI in legislative proceedings, cumulative 2016 to 2024: 71
+
+National strategy:
+  - National AI strategy released: yes
+  - Year the national AI strategy was released: 2019
+  - Alignment of the national AI strategy with the OECD AI Principles: 0.510
+
+Institutional readiness:
+  - UNESCO AI readiness assessment score: not recorded
+  - Year of the UNESCO AI readiness assessment: not recorded
+
+Values retrieved on 2026-08-18.
+Sources: Global Index on Responsible AI 2024; Stanford AI Index; OECD AI Policy Observatory; UNESCO AI Readiness Assessment. Compiled in the AI Moral Status Audit (AIMSA) dataset, https://doi.org/10.7910/DVN/YQNFYI
+A value shown as not recorded is absent from the sources above. An absent value is not a zero.

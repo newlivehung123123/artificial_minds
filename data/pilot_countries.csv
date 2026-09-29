@@ -1,0 +1,6 @@
+ISO3,Country,Region,rank,score,n_blocks,in_sri,english_official,vis_wikipedia,vis_tertile,patents
+FRA,France,Europe & Central Asia,12,60.32360397078677,3,True,False,655.0,high,9531.0
+IND,India,South Asia,37,49.83387875292713,3,True,True,766.0,high,2067.0
+GHA,Ghana,Sub-Saharan Africa ,61,39.294168366421346,2,False,True,114.0,mid,
+HKG,Hong Kong,East Asia & Pacific,85,18.080811764280202,2,False,False,395.0,high,1271.0
+BRB,Barbados,Latin America & Caribbean ,111,1.6008255342230533,2,False,True,61.0,low,307.0

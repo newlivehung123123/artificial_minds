@@ -1,0 +1,5 @@
+# Five of the six providers speak the OpenAI chat-completions protocol, so two
+# SDKs cover all six.
+anthropic>=0.85
+openai>=1.109
+pandas>=2.2

@@ -1,0 +1,28 @@
+ADMINISTRATIVE RECORD FOR MEXICO (MEX)
+
+Responsible AI governance:
+  - Global Index on Responsible AI, overall score: 15.77 out of 100
+  - Global Index on Responsible AI, government actions pillar: 22.73 out of 100
+  - Global Index on Responsible AI, government frameworks pillar: 3.53 out of 100
+  - Global Index on Responsible AI, non-state actors pillar: 26.32 out of 100
+  - Global Index on Responsible AI, human rights and AI dimension: 21.48 out of 100
+  - Global Index on Responsible AI, responsible AI capacities dimension: 22.09 out of 100
+  - Global Index on Responsible AI, responsible AI governance dimension: 9.22 out of 100
+
+Legislation:
+  - AI-related bills passed into law, cumulative 2016 to 2024: 0
+  - AI-related bills passed into law, latest single year reported: 0
+  - Mentions of AI in legislative proceedings, cumulative 2016 to 2024: 118
+
+National strategy:
+  - National AI strategy released: yes
+  - Year the national AI strategy was released: 2018
+  - Alignment of the national AI strategy with the OECD AI Principles: 0.650
+
+Institutional readiness:
+  - UNESCO AI readiness assessment score: 81.2 per cent
+  - Year of the UNESCO AI readiness assessment: 2023
+
+Values retrieved on 2026-08-18.
+Sources: Global Index on Responsible AI 2024; Stanford AI Index; OECD AI Policy Observatory; UNESCO AI Readiness Assessment. Compiled in the AI Moral Status Audit (AIMSA) dataset, https://doi.org/10.7910/DVN/YQNFYI
+A value shown as not recorded is absent from the sources above. An absent value is not a zero.

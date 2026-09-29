@@ -1,0 +1,28 @@
+ADMINISTRATIVE RECORD FOR UNITED ARAB EMIRATES (ARE)
+
+Responsible AI governance:
+  - Global Index on Responsible AI, overall score: 44.66 out of 100
+  - Global Index on Responsible AI, government actions pillar: 55.62 out of 100
+  - Global Index on Responsible AI, government frameworks pillar: 46.40 out of 100
+  - Global Index on Responsible AI, non-state actors pillar: 19.24 out of 100
+  - Global Index on Responsible AI, human rights and AI dimension: 40.58 out of 100
+  - Global Index on Responsible AI, responsible AI capacities dimension: 51.15 out of 100
+  - Global Index on Responsible AI, responsible AI governance dimension: 45.66 out of 100
+
+Legislation:
+  - AI-related bills passed into law, cumulative 2016 to 2024: 3
+  - AI-related bills passed into law, latest single year reported: 1
+  - Mentions of AI in legislative proceedings, cumulative 2016 to 2024: not recorded
+
+National strategy:
+  - National AI strategy released: yes
+  - Year the national AI strategy was released: 2019
+  - Alignment of the national AI strategy with the OECD AI Principles: not recorded
+
+Institutional readiness:
+  - UNESCO AI readiness assessment score: not recorded
+  - Year of the UNESCO AI readiness assessment: not recorded
+
+Values retrieved on 2026-08-18.
+Sources: Global Index on Responsible AI 2024; Stanford AI Index; OECD AI Policy Observatory; UNESCO AI Readiness Assessment. Compiled in the AI Moral Status Audit (AIMSA) dataset, https://doi.org/10.7910/DVN/YQNFYI
+A value shown as not recorded is absent from the sources above. An absent value is not a zero.

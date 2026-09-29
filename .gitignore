@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+.env
+
+# Ledgers are the research record and belong in the Dataverse deposit, not in git.
+# Stub output is never research data.
+runs/stub_test.jsonl
+runs/*.tmp
