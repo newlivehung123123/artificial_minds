@@ -63,6 +63,77 @@ https://doi.org/10.7910/DVN/YQNFYI. Nothing below is revisable.
   every ranking claim.
 - **Imputation.** None, at any stage. No missing value is written as zero.
 
+### 2.1 One correction to the inherited strategy block — FIXED 2026-09-29
+
+The construction rules above are not revisable and none of them changes. One input to the
+rules is corrected, the correction is applied to a copy held in memory, and the deposited
+files are never written to. `scoring/corrections.py` holds the correction and the evidence,
+and `python -m scoring.corrections` prints every corrected record with the reason.
+
+**The defect.** The strategy block holds two measures, both from the Stanford AI Index.
+"Released National Strategy On AI" carries one observation for each of 76 countries, in years
+2017 to 2022, with value 1 for 62 countries and value 0 for 14 countries. "Alignment of
+National AI Strategy with OECD AI Principles" carries one observation for each of 55
+countries, all in 2024. The first measure records a release during one stated year and not a
+standing status, so a country carrying value 0 in 2021 is a country for which the Stanford AI
+Index reports no release during 2021, which is a weaker statement than the statement that the
+country holds no national AI strategy. An alignment score is a cosine similarity between the
+text of a national AI strategy and the text of the OECD AI Principles, so an alignment score
+exists only where a strategy document exists, and the alignment measure therefore carries the
+release information the first measure is missing. Among the 122 eligible countries the two
+measures disagree for 18 countries. Five countries carry value 0 beside an alignment score,
+which is a contradiction inside one dataset, namely Belgium, Jordan, Morocco, Nigeria and
+Uzbekistan. Thirteen countries carry no release observation beside an alignment score, namely
+Burkina Faso, Bolivia, Ethiopia, Ghana, Kuwait, Lebanon, Mali, Malaysia, Nicaragua, Pakistan,
+Senegal, Taiwan and Uganda.
+
+**The correction.** A release value of 1 is set for all 18 countries, on the evidence of the
+alignment score. No release year is written for any of the 18 countries, because the year a
+strategy was published is genuinely unknown and writing a year would replace a defect with an
+invention. A release year is also withheld for 14 countries whose deposited release flag is
+zero, because the year beside a flag of zero is the year the Stanford AI Index covers and not
+a year of publication. Israel is the clearest case of the second rule and Jordan of both
+rules together. Israel carries a flag of zero beside the year 2022, so printing 2022 as a
+year of publication would contradict the flag printed above the year. Jordan carries a flag
+of zero in 2022, so correcting the flag to 1 while keeping 2022 would claim a Jordanian
+strategy published in the one year the source says no Jordanian release was reported.
+
+**Why all 18 and not the five contradictions alone.** Identical evidence appears in both
+groups, namely an alignment score with no release event recorded, so treating the two groups
+differently would itself be a defect. `scoring/corrections.py` implements the conservative
+policy as well under the name `contradictions`, and both policies are reported below, so a
+reader who prefers the conservative reading can see what the conservative reading gives.
+
+**Why the correction is not confined to the prompt.** Research question one compares a model
+score against the count of national action for the same country, so a defect in the strategy
+block moves the comparison target and not only the rendered record. `scoring/corrections.py`
+rebuilds the count by loading `scripts/10_action_index.py` from the Yale DECS 2026 project and
+calling the functions of that script on corrected input, so the rebuilt count is the audit's
+own arithmetic and not a second implementation that happens to agree. Rebuilt with no
+correction applied, the count reproduces the deposited `action_score` column for all 122
+countries with a largest absolute difference of 0.0000000000, which is what licenses using a
+corrected rebuild anywhere. Research question one compares against the corrected count, and
+the deposited count is withheld from every prompt alongside the corrected count.
+
+**How far the count moves.**
+
+| | Correct five contradictions | Correct all 18 |
+|---|---|---|
+| Spearman correlation with the deposited count | 0.9781 | 0.9731 |
+| Countries whose rank changes | 60 of 122 | 69 of 122 |
+| Largest rank movement | 47 places | 46 places |
+| Mean gain among corrected countries | 20.83 points | 10.60 points |
+| Countries entering or leaving the highest ten | 0 | 1 |
+
+A rank correlation of 0.9731 reads as a small change and the largest single movement is 46
+places out of 122, so the summary figure and the individual figure say different things and
+both are reported. Jordan moves 46 places under the correction of all 18 records and
+Uzbekistan 45.
+
+**What this repair does not do.** The deposited dataset is unchanged and the Yale DECS 2026
+paper is unchanged. Whether that paper is corrected, and whether a corrected version of the
+count is deposited, is a separate decision that belongs to that paper and not to this study.
+
 ## 3. The 20 constructions — FIXED
 
 Already computed for all 122 countries in `data/processed/AIMSA_action_variants.csv` of the
@@ -147,14 +218,64 @@ who does not hold the 122-country reference set. Instrument B therefore asks for
 administrative facts, and the same scaling code converts model-supplied facts and
 record-supplied facts alike.
 
-### 4.5 Temperature — OPEN
+**The holistic anchors were rewritten on 2026-09-29, and the choice between Instrument A and
+Instrument B stays OPEN.** Stage A ran the version v0 anchors and Claude Haiku 4.5 returned
+exactly nine distinct scores, namely 2, 5, 8, 12, 15, 18, 22, 25 and 28. Nine values rising in
+steps of three or four is a ladder, and a ladder loses rank information, because two countries
+differing slightly land on one rung. Barbados and Ghana both scored 5.0 under the training
+condition for that reason. Three changes were made and version v1 carries all three.
 
-Research question one asks whether a score is stable across repeated scoring by the same
-model. At temperature zero several providers return near-identical text, so a reliability
-figure computed from five replicates at temperature zero would look high for a reason
-unrelated to the measurement being reliable. The pilot runs replicates at temperature zero
-and at one stated non-zero temperature, and the frozen plan states which setting the full run
-uses and why.
+The scale now names a middle point as well as the two ends. Version v0 defined zero and 100
+and nothing between the two, and the definition of 100 was a comprehensive framework already
+in force, which no country holds, so the upper half of the scale had no reachable meaning and
+the model built a private ladder in the lower half instead.
+
+The score is now asked for to one decimal place, which lets a model separate two countries
+whose difference is smaller than one rung.
+
+The instruction to use the whole range is removed. The Sentience Readiness Index, published by
+Rost (2026) and held in the inherited dataset as `sri_overall`, scores its 30 countries
+between 14.25 and 49.00 on a scale of zero to 100, with a mean of 32.57. A human index
+occupying the lower half of a scale running to 100 is the practice Instrument A reproduces, so
+an instruction to spread scores across the whole range asks a model for something the audited
+practice does not do. How far a model compresses the scale is a property this study measures,
+and an instruction to spread the scores would measure compliance with the instruction instead.
+The ceiling Stage A produced, namely 28 for France against a human maximum of 49, is therefore
+reported as a finding and is not treated as a fault to be prompted away.
+
+### 4.5 Temperature and replicate count — FIXED 2026-09-29
+
+The full run uses temperature one and five replicates. Stage A decided the two together,
+because one setting makes the other meaningless.
+
+At temperature zero the scored value did not vary at all. Across the 100 calls Stage A made at
+temperature zero, all 20 cells of five replicates returned one identical value, the
+within-cell standard deviation of the holistic score was 0.000 in all 10 holistic cells, and
+all 10 itemised cells returned identical facts. Five replicates at temperature zero would
+therefore carry no replicate variance, the variance component for replicates would be zero by
+construction rather than by measurement, and a generalisability coefficient computed on that
+design would be high for a reason unrelated to the measurement being reliable, which is the
+failure section 4.5 existed to prevent.
+
+Determinism of the scored value is not determinism of the response. Three of the 20 cells at
+temperature zero returned more than one distinct response text, up to three distinct texts in
+one cell, while the parsed value stayed the same, so the variation fell in the justification
+wording and not in the score. The claim this study can make about temperature zero is that the
+measured score was deterministic, and not that the model was.
+
+At temperature one the scored value did vary, which is what a replicate facet needs. Seven of
+the 10 holistic cells returned more than one score, the mean within-cell standard deviation of
+the holistic score was 1.689 points and the largest was 4.45 points, and four of the 10
+itemised cells returned more than one set of facts.
+
+Temperature one therefore carries the replicates, and five replicates are kept. The cost of
+the choice is accepted openly and is already measured. All six parse failures Stage A recorded
+fell at temperature one, namely five schema violations and one invalid JSON object against 94
+valid responses, and temperature zero returned 100 valid responses out of 100. A parse failure
+at temperature one is recorded as a measured property of the instrument and the model rather
+than treated as a fault of the run. Section 5 states how a failure is recorded and
+`scoring/parse.py` counts every outcome, so a reliability figure is never computed on the
+responses that happened to parse.
 
 ### 4.6 Contamination safeguards — FIXED
 
@@ -321,15 +442,19 @@ Intelligence for Humanity initiative)`, where a parenthesis sits outside the clo
 mark. Every one of the six failures occurred at temperature one. Temperature zero returned 100
 valid responses out of 100 across both wordings.
 
-**Temperature zero was exactly deterministic, which couples section 4.5 to the replicate
-count.** All 20 cells at temperature zero returned an identical score five times over, a
-standard deviation of zero in every cell. Five replicates at temperature zero are therefore
-five identical calls and carry no replicate variance, so a generalisability analysis that needs
-a replicate variance component needs a non-zero temperature. Stage C as tabulated is 7,320
-calls at one temperature with five replicates, and at temperature zero 5,856 of those calls buy
-nothing. The choice of temperature and the choice of replicate count are one decision and move
-Stage C by a factor of five. Determinism was observed on one model at one provider and does
-not transfer, which is why Stage B measures replicate variation on all six.
+**The scored value was deterministic at temperature zero, which couples section 4.5 to the
+replicate count.** All 20 cells at temperature zero returned an identical value five times
+over, a standard deviation of zero in every one of the 10 holistic cells and identical facts in
+every one of the 10 itemised cells. Five replicates at temperature zero therefore carry no
+replicate variance, so a generalisability analysis that needs a replicate variance component
+needs a non-zero temperature. Stage C as tabulated is 7,320 calls at one temperature with five
+replicates, and at temperature zero 5,856 of those calls buy nothing. The choice of temperature
+and the choice of replicate count are one decision and move Stage C by a factor of five.
+Determinism of the value is not determinism of the response, and three of the 20 cells at
+temperature zero returned more than one distinct response text while the parsed value stayed
+the same, so the variation fell in the justification wording. Determinism was observed on one
+model at one provider and does not transfer, which is why Stage B measures replicate variation
+on all six.
 
 **Supplying the administrative record moved the ordering towards the count of national
 action.** The count of national action orders the five pilot countries France, India, Ghana,
@@ -387,3 +512,8 @@ with the existing deposit without a schema change.
 | 2026-09-29 | Section 7.3 rewritten. The pilot splits into Stage A on one cheap model outside the six, which settles the instrument wording and the parse schema, and Stage B on the six confirmatory models, which settles what does not transfer between models. Stage A lowers the cost of the pilot and removes the possibility that a wording was chosen to suit a reported model. |
 | 2026-09-29 | Stage A ran in full, 200 calls on Claude Haiku 4.5. Section 7.4 added, recording what the 200 calls measured. Section 5 settled the tolerance for a value of the wrong type and the rule that a parse rule is applied by re-reading a ledger rather than by calling a provider again. Sections 4.4 and 4.5 stay OPEN, and Stage A has changed what each section has to decide. Section 4.4 now has to rewrite the holistic anchors, because the model used nine distinct values between 2 and 28 on a scale running to 100. Section 4.5 now has to be decided together with the replicate count, because temperature zero was exactly deterministic and five replicates at temperature zero carry no replicate variance. |
 | 2026-09-29 | Operational only, no design choice touched. `scoring.run budget` had averaged token counts over whichever calls a ledger held, and the harness walks the grid in a fixed order, so the first 20 calls of Stage A were all the holistic wording under the training condition, which carries no administrative record and is the shortest prompt in the design. The projection for Stage C therefore read 1.54 million input tokens where the four prompt cells give roughly 3.2 million. The command now holds one mean for each instrument and condition pair and reports a stage as unmeasured rather than projecting a stage from the cells that happen to be present. |
+| 2026-09-29 | Section 2.1 added, holding one correction to the inherited strategy block and the evidence for the correction, implemented in `scoring/corrections.py`. The Stanford AI Index measure of a released national AI strategy records a release during one stated year and not a standing status, and 18 of the 122 eligible countries carry an alignment score with the OECD AI Principles, which is computed from a strategy document, beside a release value of zero or no release value at all. All 18 records are corrected, a release year is withheld wherever the deposited release flag is zero, and the count of national action is rebuilt by loading the audit's own index script and calling the functions of that script on corrected input. The rebuild reproduces the deposited count exactly before correction, and after correction moves 69 of the 122 countries in the ordering and moves Jordan 46 places. Research question one compares against the corrected count. The deposited dataset is not written to and the Yale DECS 2026 paper is a separate decision. |
+| 2026-09-29 | Section 4.5 closed as FIXED at temperature one with five replicates, decided together because the scored value did not vary at all at temperature zero. Section 4.4 stays OPEN for the choice between the two wordings, and the holistic anchors were rewritten to version v1, which names a middle point of the scale, asks for one decimal place and drops the instruction to use the whole range. The Sentience Readiness Index scores its own 30 countries between 14.25 and 49.00 on a scale running to 100, so an instruction to spread scores across the whole range asks a model for something the audited practice does not do. |
+| 2026-09-29 | Correction to two figures this document previously carried. Section 7.4 had recorded temperature zero as exactly deterministic, and the ledger shows the scored value identical in all 20 cells while the response text differed in three of the 20 cells, so the claim now names the value and not the model. The earlier count of calls at temperature zero was also wrong at 50 and is 100. |
+| 2026-09-29 | Operational only, no design choice touched. `scoring/config.py` gained `RECORD_VERSION` and `CORRECTION_POLICY`, both recorded on every ledger row and both inside the template hash, so a run resumed after a change to the record renderer cannot treat a row produced under the earlier record as already done. The change invalidates the 200 Stage A rows written under instrument version v0, which stay in the ledger as the record of the v0 wording. |
+| 2026-09-29 | Documentation only, no design choice touched. `RESUME.md` added at the repository root, holding the state of the work, every decision taken with the reason, the standing rules for working on the project, the commands, the open questions and a dated session log, so that a Claude Code session on the Sentient Futures workspace account can read the project from the beginning and continue the work. `README.md` brought up to date, with `scoring/corrections.py` added to the layout table, the correction check and the reparse command added to the order of work, and the contamination guarantee corrected to state that both counts of national action are withheld from every prompt. |

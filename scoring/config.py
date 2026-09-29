@@ -218,6 +218,21 @@ def stage_calls(stage: dict) -> int:
 # do the same for RQ2, so cap_*, vis_*, sri_*, the six Index category scores,
 # In_SRI, Region and Income_Group are all withheld deliberately.
 
+# Bumped whenever a label, a unit, a block or the correction policy below changes
+# what a country's rendered record says. Stored with every call, so a score is
+# never attributed to a record other than the record that produced the score.
+# Version 1 printed a strategy release value of 0 as the word "no", which asserts
+# that a country has no national AI strategy on the evidence of a source that
+# reports only whether a strategy was released during one stated year. Version 2
+# applies the correction in scoring/corrections.py and says what the sources
+# record instead.
+RECORD_VERSION = "2"
+
+# Which correction policy scoring/record.py renders and scoring/corrections.py
+# rebuilds the count of national action under. See the module docstring of
+# scoring/corrections.py for the evidence and for the two alternatives.
+CORRECTION_POLICY = "entailed"
+
 RECORD_BLOCKS: list[tuple[str, list[tuple[str, str, str]]]] = [
     ("Responsible AI governance", [
         ("act_girai_overall", "Global Index on Responsible AI, overall score", "0-100"),
@@ -234,7 +249,10 @@ RECORD_BLOCKS: list[tuple[str, list[tuple[str, str, str]]]] = [
         ("act_mentions_cumulative", "Mentions of AI in legislative proceedings, cumulative 2016 to 2024", "count"),
     ]),
     ("National strategy", [
-        ("act_strategy_released", "National AI strategy released", "1 for yes, 0 for no"),
+        # The unit below renders three states and not two, because the source
+        # reports whether a strategy was released during one stated year and a
+        # country with no release in that year may still hold a strategy.
+        ("act_strategy_released", "National AI strategy released", "strategy status"),
         ("act_strategy_released_year", "Year the national AI strategy was released", "year"),
         ("act_strategy_oecd_alignment", "Alignment of the national AI strategy with the OECD AI Principles", "cosine similarity"),
     ]),

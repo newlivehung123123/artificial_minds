@@ -4,7 +4,7 @@ The administrative record renderer.
 Turns the action layer of the AIMSA dataset into the plain-text record that the
 `record` condition supplies to a model. One country in, one block of text out.
 
-Three rules hold, and each rule is enforced in code rather than trusted.
+Four rules hold, and each rule is enforced in code rather than trusted.
 
 1. Only the columns on the allow-list in scoring/config.py are rendered. Any other
    column raises. The capability measures, the visibility measures and the
@@ -15,6 +15,13 @@ Three rules hold, and each rule is enforced in code rather than trusted.
    zero, in line with the rule inherited from the completed audit.
 3. The rendered text is checked against the withheld values for that country before
    the text is returned, so a leak fails loudly instead of contaminating a run.
+4. A value corrected by scoring/corrections.py is rendered as corrected, and the
+   correction policy is named by config.CORRECTION_POLICY and recorded with every
+   call through config.RECORD_VERSION. The correction itself is not written into
+   the prompt, because a sentence in the prompt saying that a value was corrected
+   would change what the model is being asked and would differ between countries.
+   A replicator finds the correction in scoring/corrections.py, where every
+   changed record is named with the reason for the change.
 """
 
 from __future__ import annotations
@@ -22,6 +29,7 @@ from __future__ import annotations
 import pandas as pd
 
 from . import config as C
+from . import corrections as X
 
 
 class RecordLeak(RuntimeError):
@@ -32,15 +40,37 @@ _WIDE: pd.DataFrame | None = None
 
 
 def wide() -> pd.DataFrame:
+    """The action layer under the correction policy named in scoring/config.py.
+
+    Every value except the strategy release flag is the deposited value. The
+    deposited files are never written to, and a policy of "none" returns the
+    deposited values unchanged.
+    """
     global _WIDE
     if _WIDE is None:
-        _WIDE = pd.read_csv(C.AUDIT_WIDE, dtype={"ISO3": str}).set_index("ISO3")
+        _WIDE = X.corrected_wide(C.CORRECTION_POLICY)
     return _WIDE
 
 
 def eligible() -> pd.DataFrame:
     """The 122 countries the completed audit scores, with rank and block count."""
     return pd.read_csv(C.AUDIT_INDEX, dtype={"ISO3": str}).set_index("ISO3")
+
+
+_CORRECTED_INDEX: pd.Series | None = None
+
+
+def corrected_index() -> pd.Series:
+    """The count of national action rebuilt under the correction policy.
+
+    Research question one compares a model score against this series and not
+    against the deposited action_score column, because a defect in the count moves
+    the comparison target as well as the prompt.
+    """
+    global _CORRECTED_INDEX
+    if _CORRECTED_INDEX is None:
+        _CORRECTED_INDEX = X.action_index(C.CORRECTION_POLICY)
+    return _CORRECTED_INDEX
 
 
 def _fmt(value, unit: str) -> tuple[str, str]:
@@ -57,8 +87,12 @@ def _fmt(value, unit: str) -> tuple[str, str]:
         return str(int(v)), str(int(v))
     if unit == "count":
         return f"{int(v):,}", f"{int(v)}"
-    if unit == "1 for yes, 0 for no":
-        return ("yes" if v >= 0.5 else "no"), ""
+    if unit == "strategy status":
+        # A value of 0 means the source reports no release during the one year the
+        # source reports for that country, which is not the statement that the
+        # country holds no national AI strategy. Rendering 0 as the word "no" made
+        # the stronger statement on the weaker evidence.
+        return ("yes" if v >= 0.5 else "no release recorded in the sources"), ""
     if unit == "per cent":
         return f"{v:.1f} per cent", f"{v:.1f}"
     if unit == "0-100":
@@ -80,8 +114,15 @@ def _withheld(iso3: str) -> list[str]:
     for col in row.index:
         if col.startswith(("cap_", "vis_", "sri_")) and not pd.isna(row[col]):
             out.append(f"{float(row[col]):.0f}")
+    # Both counts of national action are withheld. The deposited count is what a
+    # reader of the completed audit would find, and the corrected count is what
+    # this study compares a model score against, so either one appearing inside a
+    # prompt would put the outcome of research question one into the prompt.
     if iso3 in idx.index:
         out.append(f"{float(idx.loc[iso3, 'action_score']):.2f}")
+    corrected = corrected_index()
+    if iso3 in corrected.index:
+        out.append(f"{float(corrected.loc[iso3]):.2f}")
     return [s for s in out if len(s) >= 4]
 
 
@@ -116,7 +157,10 @@ def render(iso3: str, *, check: bool = True) -> str:
     lines.append(f"Sources: {C.RECORD_SOURCES}")
     lines.append(
         "A value shown as not recorded is absent from the sources above. "
-        "An absent value is not a zero."
+        "An absent value is not a zero. A line shown as no release recorded in "
+        "the sources means the sources report no release during the year the "
+        "sources cover for this country, and does not mean the country holds no "
+        "national AI strategy."
     )
     text = "\n".join(lines)
 

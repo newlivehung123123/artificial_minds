@@ -15,8 +15,8 @@ Legislation:
   - Mentions of AI in legislative proceedings, cumulative 2016 to 2024: 18
 
 National strategy:
-  - National AI strategy released: no
-  - Year the national AI strategy was released: 2022
+  - National AI strategy released: yes
+  - Year the national AI strategy was released: not recorded
   - Alignment of the national AI strategy with the OECD AI Principles: 0.570
 
 Institutional readiness:
@@ -25,4 +25,4 @@ Institutional readiness:
 
 Values retrieved on 2026-08-18.
 Sources: Global Index on Responsible AI 2024; Stanford AI Index; OECD AI Policy Observatory; UNESCO AI Readiness Assessment. Compiled in the AI Moral Status Audit (AIMSA) dataset, https://doi.org/10.7910/DVN/YQNFYI
-A value shown as not recorded is absent from the sources above. An absent value is not a zero.
+A value shown as not recorded is absent from the sources above. An absent value is not a zero. A line shown as no release recorded in the sources means the sources report no release during the year the sources cover for this country, and does not mean the country holds no national AI strategy.

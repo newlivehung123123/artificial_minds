@@ -266,6 +266,11 @@ def cmd_run(args) -> int:
                 "role": C.MODELS[model_key].role,
                 "iso3": iso3, "country": prompt["country"],
                 "instrument": instrument, "instrument_version": I.VERSION,
+                # Recorded on every row and not only on a record-condition row, so
+                # one ledger has one schema and a filter never has to know which
+                # condition a row belongs to before reading a field.
+                "record_version": C.RECORD_VERSION,
+                "correction_policy": C.CORRECTION_POLICY,
                 "condition": condition, "replicate": replicate,
                 "temperature": temperature, "template_sha256_16": template,
                 "prompt_sha256_16": prompt["prompt_sha256_16"],
