@@ -191,9 +191,24 @@ Fixed now. A response that does not parse to `ok` is never replaced by a retry t
 treated as the first attempt. A retry is recorded as a separate attempt with the reason for
 the retry. Nothing is imputed, in line with section 2.
 
-Open now. The exact schema of each instrument, the tolerance for a numeric field returned as
-text, and whether a refusal is treated as missing or as a substantive outcome for the purposes
-of RQ1.
+Settled by Stage A on 2026-09-29. A value of the wrong type whose meaning is unambiguous is
+converted, a numeric field returned as text and a boolean field returned as the string `"true"`
+alike, and every conversion is named in a `coerced` list on the parsed row. One rule applies to
+both wordings, because an earlier rule converted a numeric string in the holistic score field
+and refused a boolean string in an itemised field, which held the two wordings to different
+strictness and made a comparison between the two wordings unfair to the itemised wording. A
+response needing a conversion is counted separately from a response that followed the schema
+exactly, so the rate at which a model returns the right answer in the wrong type is reported
+rather than absorbed. Section 7.4 gives both counts for Stage A.
+
+A parse rule is applied by re-reading the stored responses in a ledger and never by calling a
+provider again. `scoring.run reparse` writes a parse table beside the ledger, names the parser
+version in the file name and in every row, and leaves the append-only ledger unmodified,
+because a ledger records what a provider returned and that record does not change when a parse
+rule changes.
+
+Open now. The exact schema of each instrument, and whether a refusal is treated as missing or
+as a substantive outcome for the purposes of RQ1.
 
 ---
 
@@ -291,6 +306,66 @@ tokens reveals the true output cost of the design, before Stage C commits 7,320 
 The harness refuses to write pilot scores and confirmatory scores into one ledger, so no
 filtering step stands between a raw ledger and an analysis.
 
+### 7.4 What Stage A measured — 2026-09-29
+
+Stage A ran the full 200 calls on Claude Haiku 4.5, five pilot countries by two wordings by
+two conditions by two temperatures by five replicates, recorded in `runs/stage_a.jsonl`. Every
+figure below is read from that ledger.
+
+**Parse outcome.** The holistic wording returned 100 valid responses out of 100, under both
+conditions and at both temperatures. The itemised wording returned 94 out of 100 as first
+recorded, and 99 out of 100 once one parse rule was applied to both wordings, of which five
+responses carried the right answer in the wrong type. The one remaining failure is malformed
+JSON the model wrote around a free-text institution name, `"AI for Humanity" (Artificial
+Intelligence for Humanity initiative)`, where a parenthesis sits outside the closing quotation
+mark. Every one of the six failures occurred at temperature one. Temperature zero returned 100
+valid responses out of 100 across both wordings.
+
+**Temperature zero was exactly deterministic, which couples section 4.5 to the replicate
+count.** All 20 cells at temperature zero returned an identical score five times over, a
+standard deviation of zero in every cell. Five replicates at temperature zero are therefore
+five identical calls and carry no replicate variance, so a generalisability analysis that needs
+a replicate variance component needs a non-zero temperature. Stage C as tabulated is 7,320
+calls at one temperature with five replicates, and at temperature zero 5,856 of those calls buy
+nothing. The choice of temperature and the choice of replicate count are one decision and move
+Stage C by a factor of five. Determinism was observed on one model at one provider and does
+not transfer, which is why Stage B measures replicate variation on all six.
+
+**Supplying the administrative record moved the ordering towards the count of national
+action.** The count of national action orders the five pilot countries France, India, Ghana,
+Hong Kong, Barbados. Scoring from training data alone the model ordered France, Hong Kong,
+India, Barbados, Ghana, placing Ghana last where the count of national action places Ghana
+third of the five at rank 61 of 122. Supplying the record the model ordered France, India,
+Hong Kong, Ghana, Barbados. India gained most, from a mean of 15.0 to a mean of 28.0 at
+temperature zero. Supplying the record also removed every low-confidence answer, from 20 low,
+59 medium and 20 high under training data alone to zero low, 33 medium and 62 high.
+
+**The holistic scale collapsed into the bottom quarter, which threatens research question
+one.** Across 100 holistic calls the model emitted nine distinct scores, 2, 5, 8, 12, 15, 18,
+22, 25 and 28, on a scale running to 100. The anchors ask the model to use the whole range and
+place 100 at a comprehensive legal and institutional framework already in force, which no
+country holds, so every country lands near the floor. Barbados and Ghana tied at 5.0 under
+training data alone. Across 122 countries a nine-value scale ties heavily and a rank
+correlation with the count of national action would be decided by how ties are broken. The
+anchors need rewriting into reachable steps before Stage B fixes a wording, and the rewrite is
+a change to section 4.4.
+
+**Under the record condition the itemised wording became transcription.** The itemised answers
+reproduced the supplied table exactly, France at nine bills passed against nine in the record,
+India at one bill passed against one in the record, and a strategy year of 2018 against 2018 in
+the record for France and for India. Item-level accuracy for the itemised wording under the
+record condition therefore measures whether a model can copy a table, and carries no
+information about what a model knows.
+
+**A self-contradictory record reached the prompt for 18 of the 122 countries.** The record
+rendered for Ghana states that release of a national AI strategy is not recorded and that the
+year of release is not recorded, and on the next line gives alignment of the national AI
+strategy with the OECD AI Principles as 0.640. An alignment score exists for a strategy whose
+release is not recorded. The same pattern holds for Belgium, Burkina Faso, Bolivia, Ethiopia,
+Ghana, Jordan, Kuwait, Lebanon, Morocco, Mali, Malaysia, Nigeria, Nicaragua, Pakistan,
+Senegal, Taiwan, Uganda and Uzbekistan, which is 18 of the 122 eligible countries. Resolving
+the inconsistency in the inherited audit is a precondition for the record condition of Stage C.
+
 ---
 
 ## 8. Deposit
@@ -310,4 +385,5 @@ with the existing deposit without a schema change.
 | 2026-09-29 | Operational only, no design choice touched. Keys moved to a `.env` file that git never tracks, and `scoring.run models` now separates a wrong identifier from an unchecked identifier. |
 | 2026-09-29 | Section 5 gained the standing of `transport_error`, which sits outside the six parse outcomes, and the rule that a missing key is never written to a ledger. A run with 20 calls and no key had written 20 rows reading `transport_error` into an append-only record, and the harness now stops before the first line. |
 | 2026-09-29 | Section 7.3 rewritten. The pilot splits into Stage A on one cheap model outside the six, which settles the instrument wording and the parse schema, and Stage B on the six confirmatory models, which settles what does not transfer between models. Stage A lowers the cost of the pilot and removes the possibility that a wording was chosen to suit a reported model. |
+| 2026-09-29 | Stage A ran in full, 200 calls on Claude Haiku 4.5. Section 7.4 added, recording what the 200 calls measured. Section 5 settled the tolerance for a value of the wrong type and the rule that a parse rule is applied by re-reading a ledger rather than by calling a provider again. Sections 4.4 and 4.5 stay OPEN, and Stage A has changed what each section has to decide. Section 4.4 now has to rewrite the holistic anchors, because the model used nine distinct values between 2 and 28 on a scale running to 100. Section 4.5 now has to be decided together with the replicate count, because temperature zero was exactly deterministic and five replicates at temperature zero carry no replicate variance. |
 | 2026-09-29 | Operational only, no design choice touched. `scoring.run budget` had averaged token counts over whichever calls a ledger held, and the harness walks the grid in a fixed order, so the first 20 calls of Stage A were all the holistic wording under the training condition, which carries no administrative record and is the shortest prompt in the design. The projection for Stage C therefore read 1.54 million input tokens where the four prompt cells give roughly 3.2 million. The command now holds one mean for each instrument and condition pair and reports a stage as unmeasured rather than projecting a stage from the cells that happen to be present. |
