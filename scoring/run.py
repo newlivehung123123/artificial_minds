@@ -329,13 +329,39 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cell_means(rows: list[dict]) -> dict[tuple[str, str], tuple[float, float, int]]:
+    """Mean input and output tokens for every instrument and condition present.
+
+    A flat mean over a part-finished ledger is wrong, and wrong in one direction.
+    The harness walks the grid in a fixed order, so the opening rows of a ledger
+    are all one instrument under one condition, and the training condition carries
+    no administrative record and is the shortest prompt in the whole design.
+    Averaging whichever rows happen to be present therefore quotes the cheapest
+    cell of the grid as the price of every cell. Splitting the mean by instrument
+    and condition, and then refusing to project a stage until every cell that
+    stage runs has been measured, is what stops a part-finished ledger from
+    underquoting a stage.
+    """
+    cells: dict[tuple[str, str], list[dict]] = {}
+    for row in rows:
+        cells.setdefault((row["instrument"], row["condition"]), []).append(row)
+    return {
+        key: (sum(r["input_tokens"] for r in group) / len(group),
+              sum(r.get("output_tokens") or 0 for r in group) / len(group),
+              len(group))
+        for key, group in cells.items()
+    }
+
+
 def cmd_budget(args) -> int:
     """Project every stage from measured token counts and hand-entered prices.
 
     Token counts come from a ledger and prices come from scoring/config.py, so a
     figure printed here is a measurement multiplied by a published price and never
     an estimate. A model with no price filled in is listed as unpriced rather than
-    left out, so a missing price cannot quietly shrink a projection.
+    left out, so a missing price cannot quietly shrink a projection. A stage whose
+    instrument and condition cells are not all measured is reported as unmeasured
+    rather than projected from the cells that are present.
     """
     rows = list(read_ledger(Path(args.ledger)).values())
     real = [r for r in rows if not r.get("stub") and r.get("input_tokens")]
@@ -349,10 +375,17 @@ def cmd_budget(args) -> int:
               "and every cost below is meaningless until one real call replaces it.")
         print()
 
-    mean_in = sum(r["input_tokens"] for r in used) / len(used)
-    mean_out = sum(r.get("output_tokens") or 0 for r in used) / len(used)
-    print(f"measured over {len(used)} calls in {Path(args.ledger).name}, mean "
-          f"{mean_in:,.0f} input tokens and {mean_out:,.0f} output tokens per call")
+    means = cell_means(used)
+    print(f"measured over {len(used)} calls in {Path(args.ledger).name}")
+    for instrument in C.INSTRUMENTS:
+        for condition in C.CONDITIONS:
+            cell = means.get((instrument, condition))
+            if cell is None:
+                print(f"  {instrument:9} {condition:9} no call yet")
+            else:
+                print(f"  {instrument:9} {condition:9} {cell[0]:6,.0f} input and "
+                      f"{cell[1]:5,.0f} output tokens per call, over "
+                      f"{cell[2]} calls")
 
     priced = {k: v for k, v in C.PRICES.items()
               if v.get("input") is not None and v.get("output") is not None}
@@ -361,29 +394,50 @@ def cmd_budget(args) -> int:
         keys = (list(C.PILOT_MODELS)[:stage["factors"]["models"]]
                 if stage["role"] == "pilot" else list(C.CONFIRMATORY))
         per_model = calls // max(1, len(keys))
+        conditions = list(C.CONDITIONS[:stage["factors"]["conditions"]])
+        # A stage that runs both instruments is projected once over both. A stage
+        # that runs one instrument is projected once for each candidate wording,
+        # because section 4.4 of PLAN.md leaves the wording open and the two
+        # wordings differ in prompt length.
+        choices = ([("both instruments", list(C.INSTRUMENTS))]
+                   if stage["factors"]["instruments"] == len(C.INSTRUMENTS)
+                   else [(f"under the {i} wording", [i]) for i in C.INSTRUMENTS])
         print()
         print(f"stage {stage['code']}  {stage['name']}")
         print("  " + " x ".join(f"{v} {k}" for k, v in stage["factors"].items())
               + f" = {calls:,} calls, {per_model:,} per model")
-        print(f"  {calls * mean_in / 1e6:.2f} million input tokens, "
-              f"{calls * mean_out / 1e6:.2f} million output tokens")
-        total, unpriced = 0.0, []
-        for key in keys:
-            price = priced.get(key)
-            if price is None:
-                unpriced.append(C.MODELS[key].label)
+        for caption, instruments in choices:
+            wanted = [(i, c) for i in instruments for c in conditions]
+            absent = [f"{i} {c}" for i, c in wanted if (i, c) not in means]
+            print(f"  {caption}")
+            if absent:
+                print(f"    not projected, because no call has yet measured "
+                      f"{', '.join(absent)}")
                 continue
-            cost = (per_model * mean_in / 1e6 * price["input"]
-                    + per_model * mean_out / 1e6 * price["output"])
-            total += cost
-            print(f"    {C.MODELS[key].label:20} ${cost:9,.2f}   "
-                  f"at ${price['input']}/${price['output']} per million, "
-                  f"read {price['read_on']}")
-        if total:
-            print(f"    {'priced subtotal':20} ${total:9,.2f}")
-        if unpriced:
-            print(f"    unpriced, so absent from the subtotal above: "
-                  f"{', '.join(unpriced)}")
+            # The grid is balanced, so every cell holds the same number of calls
+            # and an unweighted mean over the cells is the mean over the stage.
+            mean_in = sum(means[k][0] for k in wanted) / len(wanted)
+            mean_out = sum(means[k][1] for k in wanted) / len(wanted)
+            print(f"    {mean_in:,.0f} input and {mean_out:,.0f} output tokens per "
+                  f"call, so {calls * mean_in / 1e6:.2f} million input tokens and "
+                  f"{calls * mean_out / 1e6:.2f} million output tokens")
+            total, unpriced = 0.0, []
+            for key in keys:
+                price = priced.get(key)
+                if price is None:
+                    unpriced.append(C.MODELS[key].label)
+                    continue
+                cost = (per_model * mean_in / 1e6 * price["input"]
+                        + per_model * mean_out / 1e6 * price["output"])
+                total += cost
+                print(f"      {C.MODELS[key].label:20} ${cost:9,.2f}   "
+                      f"at ${price['input']}/${price['output']} per million, "
+                      f"read {price['read_on']}")
+            if total:
+                print(f"      {'priced subtotal':20} ${total:9,.2f}")
+            if unpriced:
+                print(f"      unpriced, so absent from the subtotal above: "
+                      f"{', '.join(unpriced)}")
     print()
     print("Fill PRICES in scoring/config.py from each price page, with the date "
           "read, and rerun to price the models listed as unpriced.")
