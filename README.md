@@ -27,6 +27,7 @@ them.
 | Path | Holds |
 |---|---|
 | `PLAN.md` | The analysis plan, with a status label on every choice |
+| `.env.example` | The six key names to copy to `.env`, which git never tracks |
 | `scoring/config.py` | Providers, models, prices, the design constants, the record allow-list |
 | `scoring/record.py` | The administrative record renderer, with the contamination guard |
 | `scoring/instruments.py` | The two candidate instruments and the prompt builder |
@@ -53,10 +54,11 @@ python -m scoring.instruments
 python -m scoring.run run --stub --countries pilot --out runs/stub_test.jsonl
 python -m scoring.run report runs/stub_test.jsonl
 
-# 5. Confirm every API identifier against each provider's own model listing
-export ANTHROPIC_API_KEY=... OPENAI_API_KEY=... GEMINI_API_KEY=...
-export DEEPSEEK_API_KEY=... MOONSHOT_API_KEY=... ZAI_API_KEY=...
+# 5. Put the keys in .env, then confirm every API identifier against each
+#    provider's own model listing
+cp .env.example .env          # paste one key per line, .gitignore excludes .env
 python -m scoring.run models
+python -m scoring.run models --providers anthropic,openai   # or a few at a time
 
 # 6. Run the pilot, capped, one provider at a time while costs are unknown
 python -m scoring.run run --countries pilot --models claude_opus_5 \
@@ -64,9 +66,18 @@ python -m scoring.run run --countries pilot --models claude_opus_5 \
 python -m scoring.run report runs/pilot.jsonl
 ```
 
-Step five will report NOT FOUND for any identifier in `scoring/config.py` that a provider does
-not serve, and will print candidate identifiers from the listing. No identifier in the config
-is treated as correct until the listing confirms the identifier.
+Step five reports one of three outcomes for every identifier. CONFIRMED means the provider
+serves that identifier. NOT SERVED means the identifier in `scoring/config.py` is wrong, and
+the identifiers the provider does serve are printed underneath, so the repair is a copy from
+the listing. NO KEY means the identifier was never checked, because no key for that provider
+is in `.env`, and `scoring/config.py` may be perfectly correct. No identifier is treated as
+correct until a listing confirms the identifier.
+
+Keys live in `.env` and nowhere else. A shell `export` reaches only the shell that runs the
+export, and a key typed at a prompt also lands in the shell history file. Every command in
+this package reads `.env` at import, so a key is typed once and works in every terminal. A
+name already set in the environment wins over the file, so one run can use a different key
+without editing anything.
 
 Fill `PRICES` in `scoring/config.py` by hand from each provider's published price page, with
 the date read. Until a price is filled in, token counts are recorded and cost is left blank,

@@ -282,3 +282,4 @@ with the existing deposit without a schema change.
 | Date | Change |
 |---|---|
 | 2026-09-29 | Document created. Sections 2, 3, 4.1, 4.2, 4.3, 4.6, 6.1 and 7.1 set to FIXED. Sections 4.4, 4.5, 5 and 6.2 set to OPEN. |
+| 2026-09-29 | Operational only, no design choice touched. Keys moved to a `.env` file that git never tracks, and `scoring.run models` now separates a wrong identifier from an unchecked identifier. |

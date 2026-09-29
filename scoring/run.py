@@ -61,33 +61,66 @@ def read_ledger(path: Path) -> dict[str, dict]:
 
 
 def cmd_models(args) -> int:
-    """Confirm every api_id in config.py against the listing of the provider."""
-    bad = 0
-    for provider_key in sorted(C.PROVIDERS):
+    """Confirm every api_id in config.py against the listing of the provider.
+
+    Three outcomes are reported separately, because a missing key and a wrong
+    identifier call for different repairs. No key set means the identifier was
+    never checked and scoring/config.py may well be correct. Not served means the
+    identifier in scoring/config.py is wrong and has to be replaced by hand.
+    """
+    chosen = ([p.strip() for p in args.providers.split(",") if p.strip()]
+              if args.providers else sorted(C.PROVIDERS))
+    unknown = [p for p in chosen if p not in C.PROVIDERS]
+    if unknown:
+        sys.exit(f"no such provider: {', '.join(unknown)}. "
+                 f"Choose from {', '.join(sorted(C.PROVIDERS))}.")
+
+    if C.ENV_NAMES_READ:
+        print(f"{len(C.ENV_NAMES_READ)} key name(s) read from {C.ENV_FILE.name}, "
+              f"namely {', '.join(sorted(C.ENV_NAMES_READ))}")
+    else:
+        print(f"no key in {C.ENV_FILE}. Copy .env.example to .env and paste "
+              f"one key per line.")
+    print()
+
+    confirmed, not_served, not_checked = [], [], []
+    for provider_key in chosen:
         wanted = [m for m in C.MODELS.values() if m.provider == provider_key]
         try:
             served = V.list_models(provider_key)
-        except V.MissingKey as exc:
-            print(f"{provider_key:10} SKIPPED  {exc}")
-            bad += len(wanted)
+        except V.MissingKey:
+            env_var = C.PROVIDERS[provider_key].env_var
+            print(f"{provider_key:10} NO KEY    {env_var} is not set, so no "
+                  f"identifier was checked")
+            not_checked += [m.api_id for m in wanted]
             continue
         except Exception as exc:                       # noqa: BLE001
-            print(f"{provider_key:10} ERROR    {type(exc).__name__}: {exc}")
-            bad += len(wanted)
+            print(f"{provider_key:10} ERROR     {type(exc).__name__}: {exc}")
+            not_checked += [m.api_id for m in wanted]
             continue
         for model in wanted:
             hit = model.api_id in served
-            print(f"{provider_key:10} {'OK      ' if hit else 'NOT FOUND'} "
+            print(f"{provider_key:10} {'CONFIRMED' if hit else 'NOT SERVED'} "
                   f"{model.api_id}  ({model.label})")
-            if not hit:
-                bad += 1
-                near = [s for s in served if s.split("-")[0] in model.api_id][:6]
-                if near:
-                    print(f"{'':10} candidates: {', '.join(near)}")
+            if hit:
+                confirmed.append(model.api_id)
+            else:
+                not_served.append(model.api_id)
+                stem = model.api_id.split("-")[0]
+                near = [s for s in served if stem in s][:8] or served[:8]
+                print(f"{'':10} the provider serves: {', '.join(near)}")
+
     print()
-    print("Every identifier confirmed." if bad == 0 else
-          f"{bad} identifier(s) unconfirmed. Fix scoring/config.py before the pilot.")
-    return 1 if bad else 0
+    print(f"{len(confirmed)} confirmed, {len(not_served)} not served, "
+          f"{len(not_checked)} not checked")
+    if not_served:
+        print(f"Replace in scoring/config.py: {', '.join(not_served)}")
+    if not_checked:
+        print("Set a key in .env, then rerun, to check: "
+              f"{', '.join(not_checked)}")
+    if not not_served and not not_checked:
+        print("Every identifier is confirmed against the listing of its provider.")
+    return 1 if (not_served or not_checked) else 0
 
 
 def cmd_records(args) -> int:
@@ -256,7 +289,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="scoring.run")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("models", help="confirm every API identifier").set_defaults(fn=cmd_models)
+    m = sub.add_parser("models", help="confirm every API identifier")
+    m.add_argument("--providers", default="",
+                   help="anthropic,openai,... to check only the providers you hold a key for")
+    m.set_defaults(fn=cmd_models)
+
     sub.add_parser("records", help="render all 122 records").set_defaults(fn=cmd_records)
 
     r = sub.add_parser("run", help="collect scores")

@@ -17,11 +17,46 @@ Nothing in this file is authoritative until confirmed empirically:
 See PLAN.md for the status of every design choice.
 """
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 PROJECT = Path("/Users/newlivehung/Desktop/21. Sentient Futures Incubator")
 AUDIT = Path("/Users/newlivehung/Desktop/18. Yale DECS 2026")
+
+# --- API keys --------------------------------------------------------------
+# Keys are read from PROJECT/.env, which .gitignore excludes, so a key is typed
+# once into one file and is never typed into a shell. A shell `export` reaches
+# only the shell that runs the export, and a key typed at a prompt also lands in
+# the shell history file, where a key does not belong.
+
+ENV_FILE = PROJECT / ".env"
+
+
+def load_env(path: Path = ENV_FILE) -> list[str]:
+    """Read KEY=value lines from .env into the environment. Returns the names read.
+
+    A name already present in the environment wins, so a key exported in the
+    shell for one run is never silently replaced by an older key in the file.
+    """
+    names: list[str] = []
+    if not path.exists():
+        return names
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        name = name.strip()
+        value = value.strip().strip('"').strip("'")
+        if not value:
+            continue
+        names.append(name)
+        os.environ.setdefault(name, value)
+    return names
+
+
+ENV_NAMES_READ = load_env()
 
 # Inherited inputs. Read only. Never written by this package.
 AUDIT_WIDE = AUDIT / "data" / "processed" / "AIMSA_analysis_wide.csv"
