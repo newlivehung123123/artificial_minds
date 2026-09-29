@@ -181,6 +181,12 @@ Every response is parsed to one of six outcomes, and every outcome is counted an
 | `refusal` | The model declined to answer. |
 | `empty` | No content returned. |
 
+A response that never arrives cannot be parsed, so a failure of the call itself is recorded as
+`transport_error` and reported on a line of its own, outside the six. A key absent from `.env`
+is not a transport error and is never written to a ledger, because a key absent from a file is a
+fault in the environment of the run and says nothing about a model. The harness stops before
+writing a line when a key for a named model is absent.
+
 Fixed now. A response that does not parse to `ok` is never replaced by a retry that is then
 treated as the first attempt. A retry is recorded as a separate attempt with the reason for
 the retry. Nothing is imputed, in line with section 2.
@@ -302,4 +308,5 @@ with the existing deposit without a schema change.
 |---|---|
 | 2026-09-29 | Document created. Sections 2, 3, 4.1, 4.2, 4.3, 4.6, 6.1 and 7.1 set to FIXED. Sections 4.4, 4.5, 5 and 6.2 set to OPEN. |
 | 2026-09-29 | Operational only, no design choice touched. Keys moved to a `.env` file that git never tracks, and `scoring.run models` now separates a wrong identifier from an unchecked identifier. |
+| 2026-09-29 | Section 5 gained the standing of `transport_error`, which sits outside the six parse outcomes, and the rule that a missing key is never written to a ledger. A run with 20 calls and no key had written 20 rows reading `transport_error` into an append-only record, and the harness now stops before the first line. |
 | 2026-09-29 | Section 7.3 rewritten. The pilot splits into Stage A on one cheap model outside the six, which settles the instrument wording and the parse schema, and Stage B on the six confirmatory models, which settles what does not transfer between models. Stage A lowers the cost of the pilot and removes the possibility that a wording was chosen to suit a reported model. |

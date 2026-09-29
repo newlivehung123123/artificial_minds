@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import sys
 import time
 from collections import Counter
@@ -164,6 +165,26 @@ def cmd_run(args) -> int:
     if unknown:
         sys.exit(f"no such model: {', '.join(unknown)}. Choose from "
                  f"{', '.join(C.MODELS)}.")
+    # Pre-flight, before anything is printed or written. A key missing from .env is
+    # a fault in the environment and says nothing about a model, so the run stops
+    # here. An earlier version caught the missing key once per call and wrote 20
+    # lines reading transport_error, which put 20 rows into an append-only research
+    # record to report that a key had not been pasted into a file.
+    if not args.stub:
+        absent = sorted({
+            f"{C.PROVIDERS[C.MODELS[m].provider].env_var} for {C.MODELS[m].label}"
+            for m in models
+            if not os.environ.get(C.PROVIDERS[C.MODELS[m].provider].env_var)
+        })
+        if absent:
+            sys.exit(
+                "no call was made and no line was written, because these keys are "
+                "absent from the environment:\n  " + "\n  ".join(absent)
+                + f"\n\nPaste the key into {C.ENV_FILE} after the equals sign and "
+                  "save the file, then run this command again. Add --stub to test "
+                  "the harness with no key and no spending."
+            )
+
     roles = {C.MODELS[m].role for m in models}
     if roles == {"pilot"}:
         print("pilot models only. No score in this ledger may enter a "
@@ -229,6 +250,11 @@ def cmd_run(args) -> int:
             try:
                 res = V.call(model_key, prompt["system"], prompt["user"], temperature,
                              instrument=instrument, stub=args.stub)
+            except V.MissingKey as exc:
+                # Reachable only where a key is removed from the environment while a
+                # run is in flight. A key is not a property of a model, so the run
+                # stops here rather than recording an outcome against the model.
+                sys.exit(f"\nstopped after {n - 1} calls. {exc}")
             except Exception as exc:                    # noqa: BLE001
                 row |= {"outcome": "transport_error",
                         "detail": f"{type(exc).__name__}: {exc}"[:500], "stub": args.stub}

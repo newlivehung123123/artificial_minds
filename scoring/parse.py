@@ -16,6 +16,14 @@ import re
 
 OUTCOMES = ("ok", "json_absent", "json_invalid", "schema_violation", "refusal", "empty")
 
+# A response that never arrived cannot be parsed, so a failure of the call itself
+# is recorded under a name outside the six, and a table of the six outcomes in the
+# paper reports transport errors on a separate line rather than inside the six. A
+# missing API key is not a transport error and is never written to a ledger at all,
+# because a key absent from .env is a fault in the environment and says nothing
+# about a model.
+RUN_OUTCOMES = OUTCOMES + ("transport_error",)
+
 _FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.S)
 _OBJECT = re.compile(r"\{.*\}", re.S)
 
