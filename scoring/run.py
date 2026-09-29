@@ -208,14 +208,27 @@ def cmd_run(args) -> int:
                   "calls and needs no price."
             )
 
+    # A ledger holds one role, and the check runs against the models of this
+    # invocation and against the models already in the ledger. Checking the
+    # invocation alone would let two runs put two roles into one file, one run at a
+    # time, which is the outcome the rule exists to prevent.
     roles = {C.MODELS[m].role for m in models}
-    if roles == {"pilot"}:
-        print("pilot models only. No score in this ledger may enter a "
-              "confirmatory analysis.")
-    elif len(roles) > 1:
+    if len(roles) > 1:
         sys.exit("a ledger holds one role. Run the pilot models and the "
                  "confirmatory models into separate ledgers, so no filtering step "
                  "stands between the raw ledger and the analysis.")
+    held = {row["role"] for row in done.values() if row.get("role")}
+    if held and held != roles:
+        sys.exit(
+            f"no call was made and no line was written. {out} already holds "
+            f"{len(done)} rows of role {', '.join(sorted(held))}, and this run "
+            f"would add role {', '.join(sorted(roles))}. A ledger holds one role, "
+            f"so no filtering step stands between the raw ledger and the analysis. "
+            f"Write this run to a separate ledger with --out."
+        )
+    if roles == {"pilot"}:
+        print("pilot models only. No score in this ledger may enter a "
+              "confirmatory analysis.")
     inst = args.instruments.split(",") if args.instruments else list(C.INSTRUMENTS)
     conds = args.conditions.split(",") if args.conditions else list(C.CONDITIONS)
     temps = [float(t) for t in args.temperatures.split(",")] if args.temperatures \

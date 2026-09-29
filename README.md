@@ -69,31 +69,37 @@ python -m scoring.run models
 python -m scoring.run models --providers anthropic,openai   # or a few at a time
 
 # 7. Stage A of the pilot, on one cheap model outside the six, which settles the
-#    instrument wording and the parse schema. Start with 20 calls, then lift the cap.
-#    One pass ran on 2026-09-29 under instrument version v0 and is kept in
-#    runs/stage_a.jsonl. A pass under the current wording writes a new ledger.
+#    instrument wording and the parse schema. Three passes ran on 2026-09-29, one
+#    per instrument version, each in a separate ledger, and no further pass is
+#    planned. runs/stage_a.jsonl holds version v0, runs/stage_a_v1.jsonl holds
+#    version v1 and runs/stage_a_v2.jsonl holds version v2, which is the wording
+#    the full run uses. Any later pass starts with 20 calls, then lifts the cap.
 python -m scoring.run run --countries pilot --models claude_haiku_4_5 \
-    --max-calls 20 --sleep 0.5 --out runs/stage_a_v1.jsonl
-python -m scoring.run report runs/stage_a_v1.jsonl
+    --max-calls 20 --sleep 0.5 --out runs/stage_a_v3.jsonl
+python -m scoring.run report runs/stage_a_v2.jsonl
 
 # 8. Re-read the stored responses of a ledger under the current parse rule, which
 #    calls no provider, after any change to scoring/parse.py
-python -m scoring.run reparse runs/stage_a.jsonl
+python -m scoring.run reparse runs/stage_a_v2.jsonl
 
 # 9. Price the whole design from the tokens Stage A measured
-python -m scoring.run budget runs/stage_a.jsonl
+python -m scoring.run budget runs/stage_a_v2.jsonl
 
-# 10. Stage B, the six confirmatory models under the wording Stage A chose.
-#     The wording below is holistic only as an example. Stage A decides.
+# 10. Stage B, the six confirmatory models under instrument version v2. STAGES in
+#     scoring/config.py sizes Stage B at 600 calls with one instrument wording, so
+#     the command names the wording. Dropping --instruments runs both wordings and
+#     1,200 calls, which is the cost question section 4.4 of PLAN.md leaves open.
 python -m scoring.run run --countries pilot --instruments holistic \
-    --max-calls 60 --sleep 0.5 --out runs/stage_b.jsonl
+    --sleep 0.5 --out runs/stage_b.jsonl
+python -m scoring.run report runs/stage_b.jsonl
 python -m scoring.run budget runs/stage_b.jsonl
 ```
 
-Stage A and Stage B never share a ledger. The harness exits rather than writing a pilot score
-and a confirmatory score into one file, so no filtering step stands between a raw ledger and an
-analysis. Section 7.3 of `PLAN.md` states what each stage settles and why Stage B cannot be
-replaced by Stage A at any price.
+Stage A and Stage B never share a ledger. The harness refuses a run that names both a pilot model
+and a confirmatory model, and refuses a run whose role differs from the role already in the ledger
+being written to, so no filtering step stands between a raw ledger and an analysis. Section 7.3 of
+`PLAN.md` states what each stage settles and why Stage B cannot be replaced by Stage A at any
+price.
 
 Step six reports one of three outcomes for every identifier. CONFIRMED means the provider
 serves that identifier. NOT SERVED means the identifier in `scoring/config.py` is wrong, and

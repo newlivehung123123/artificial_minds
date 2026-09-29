@@ -243,19 +243,49 @@ and an instruction to spread the scores would measure compliance with the instru
 The ceiling Stage A produced, namely 28 for France against a human maximum of 49, is therefore
 reported as a finding and is not treated as a fault to be prompted away.
 
+**Version v2 is the holistic wording the full run uses, and what remains open in section 4.4 is
+the cost question alone.** Three passes of Stage A settled the wording. Version v0 produced a
+ladder of nine values between 2 and 28. Version v1 broke the ladder but bought the resolution with
+a string, because the phrase "to one decimal place" asks for a format and drove the count of
+responses that followed the schema exactly down to 85 of 200. Version v2 asks for a JSON number in
+the schema and for a fractional score in the anchor paragraph, returned 25 distinct values between
+2.5 and 42.5, and raised the count of responses that followed the schema exactly to 183 of 200. No
+further wording change is planned, and section 7.6 records the figures.
+
+**The record condition of Instrument B is a manipulation check and not a measurement, which
+Stage A established rather than assumed.** Under the record condition the itemised wording
+returned the value the rendered record carries in all 130 answers where the record carries a
+value for a pilot country and returned null in all 70 answers where the record leaves the field
+absent, including the 20 answers where the same wording under training data alone supplied a
+value from the model's own knowledge. Hong Kong is the clearest case. Under training data alone the model reported a Hong
+Kong national AI strategy released in 2020 in all 10 calls, and under the record condition, where
+the rendered record shows no release for Hong Kong, the model returned null in all 10. Supplying
+the administrative record therefore replaces what the model holds rather than adding to what the
+model holds, so an item-level accuracy figure computed on the itemised record condition would
+measure transcription. Item-level accuracy for Instrument B is computed on the training condition,
+and the itemised record condition is reported as evidence that the rendered record reaches the
+model.
+
+What remains open is whether the measured cost allows both instruments in the full run with the
+instrument entering the reliability design as a facet. Section 4.4 cannot close the cost question
+until `PRICES` in `scoring/config.py` carries a price for each of the six models, read from each
+provider's own published price page. Every token count the projection needs is already measured
+and recorded in section 7.4 and section 7.6.
+
 ### 4.5 Temperature and replicate count — FIXED 2026-09-29
 
 The full run uses temperature one and five replicates. Stage A decided the two together,
 because one setting makes the other meaningless.
 
-At temperature zero the scored value did not vary at all. Across the 100 calls Stage A made at
-temperature zero, all 20 cells of five replicates returned one identical value, the
-within-cell standard deviation of the holistic score was 0.000 in all 10 holistic cells, and
-all 10 itemised cells returned identical facts. Five replicates at temperature zero would
-therefore carry no replicate variance, the variance component for replicates would be zero by
-construction rather than by measurement, and a generalisability coefficient computed on that
-design would be high for a reason unrelated to the measurement being reliable, which is the
-failure section 4.5 existed to prevent.
+At temperature zero the scored value did not vary at all under the instrument wording Stage A
+first ran. Across the 100 calls the first pass of Stage A made at temperature zero, all 20
+cells of five replicates returned one identical value, the within-cell standard deviation of
+the holistic score was 0.000 in all 10 holistic cells, and all 10 itemised cells returned
+identical facts. Five replicates at temperature zero would therefore carry no replicate
+variance, the variance component for replicates would be zero by construction rather than by
+measurement, and a generalisability coefficient computed on that design would be high for a
+reason unrelated to the measurement being reliable, which is the failure section 4.5 existed to
+prevent.
 
 Determinism of the scored value is not determinism of the response. Three of the 20 cells at
 temperature zero returned more than one distinct response text, up to three distinct texts in
@@ -268,12 +298,25 @@ the 10 holistic cells returned more than one score, the mean within-cell standar
 the holistic score was 1.689 points and the largest was 4.45 points, and four of the 10
 itemised cells returned more than one set of facts.
 
+Instrument version v2 removed the exact determinism of the scored value at temperature zero, and
+the decision of section 4.5 stands on a narrower margin than the first pass of Stage A gave.
+Under version v2, recorded in `runs/stage_a_v2.jsonl`, seven of the 10 holistic cells at
+temperature zero returned one identical score rather than all 10, with a mean within-cell
+standard deviation of 0.60 points and a largest of 2.74 points, while all 10 itemised cells still
+returned identical facts. Temperature one remains the setting that carries the replicates, with
+two of 10 holistic cells identical, a mean within-cell standard deviation of 3.29 points and a
+largest of 5.88 points. A replicate variance component measured at temperature zero under version
+v2 would rest on three holistic cells out of 10 and on no itemised cell at all, so temperature one
+is kept. Section 7.6 records the figures in full.
+
 Temperature one therefore carries the replicates, and five replicates are kept. The cost of
-the choice is accepted openly and is already measured. All six parse failures Stage A recorded
-fell at temperature one, namely five schema violations and one invalid JSON object against 94
-valid responses, and temperature zero returned 100 valid responses out of 100. A parse failure
-at temperature one is recorded as a measured property of the instrument and the model rather
-than treated as a fault of the run. Section 5 states how a failure is recorded and
+the choice is accepted openly and is already measured. All six parse failures the first pass of
+Stage A recorded fell at temperature one, namely five schema violations and one invalid JSON
+object against 94 valid responses, and temperature zero returned 100 valid responses out of 100.
+The second pass and the third pass of Stage A recorded no parse failure at either temperature, so
+the parse failure rate is a property of the instrument wording as well as of the temperature. A
+parse failure at temperature one is recorded as a measured property of the instrument and the
+model rather than treated as a fault of the run. Section 5 states how a failure is recorded and
 `scoring/parse.py` counts every outcome, so a reliability figure is never computed on the
 responses that happened to parse.
 
@@ -581,6 +624,115 @@ instrument and the corrected record work together as intended, and not as a meas
 agreement between a model score and the count of national action. Stage C scores all 122
 countries and is what tests the ordering.
 
+### 7.6 What the third pass of Stage A measured — 2026-09-29
+
+The third pass ran the same 200 calls on Claude Haiku 4.5 under instrument version v2 and record
+version 2, recorded in `runs/stage_a_v2.jsonl`. Version v2 changed the holistic score field and
+changed nothing else, so a comparison of version v1 with version v2 isolates the score field.
+Every figure below is read from `runs/stage_a_v2.jsonl`, and every comparison is against
+`runs/stage_a_v1.jsonl` and `runs/stage_a.jsonl`.
+
+**Version v2 kept the resolution and removed the string.** The holistic wording returned 25
+distinct scores across 100 calls, against 17 under version v1 and nine under version v0, and
+the highest score rose to 42.5 against 38.5 and 28.0. Of the 100 holistic scores 83 carry a
+decimal part, against 86 under version v1 and none at all under version v0. Holistic
+conversions fell from 100 to two, and the two remaining holistic conversions are one Hong Kong
+call at temperature one and one Ghana call at temperature one. Asking for the type in the
+schema and the precision in the anchor paragraph therefore bought the same resolution that the
+phrase "to one decimal place" bought, without the string. Total conversions across both
+wordings fell from 115 to 17, so the count of responses that followed the schema exactly rose
+from 85 of 200 to 183 of 200, which is 91.5 per cent against 97 per cent under version v0 and
+42.5 per cent under version v1.
+
+**Every remaining itemised conversion falls in the record condition and follows the wording of
+the record rather than the wording of the schema.** All 15 itemised conversions are the field
+`strategy_released` returned as `"true"` in quotation marks, and all 15 fall under the record
+condition, 10 for France, four for India and one for Ghana. France, India and Ghana are the three
+pilot countries whose rendered record reads "National AI strategy released: yes". Under training
+data alone the same field returned a JSON boolean in all 30 calls that did not return null, so the
+string form tracks the word "yes" in the rendered record and not the schema hint "true, false or
+null". One France response at temperature one also returned `strategy_year`, `bills_passed` and
+`legislative_mentions` in quotation marks.
+
+**Temperature zero stopped being deterministic in the scored value, and section 4.5 records the
+change.** Under version v0 and under version v1 all 10 holistic cells at temperature zero
+returned one identical score. Under version v2 seven of the 10 holistic cells returned one
+identical score, and the three cells that varied are France, Ghana and India under training data
+alone, with a mean within-cell standard deviation of 0.60 points and a largest of 2.74 points. The
+ledger does not establish the cause. What the ledger establishes is that the only wording change
+between version v1 and version v2 is the score field and that the count of identical cells at
+temperature zero fell from 10 to seven. A request for a fixed number of decimal places narrows
+the set of strings a model can write and a request for a JSON number does not, so two candidate
+values may be close enough in probability for greedy decoding to select differently on two calls,
+and the ledger is consistent with that mechanism without testing the mechanism. The decision of
+section 4.5 survives the change, because temperature one still varies far more, with two of 10
+holistic cells identical, a mean within-cell standard deviation of 3.29 points and a largest of
+5.88 points, and because a replicate variance component measured at temperature zero would now
+rest on three cells out of 10.
+
+**The record condition reproduced the ordering of the corrected count of national action again,
+and the margin carrying the reproduction is 0.35 points.** The corrected count orders the five
+pilot countries France 60.32, India 49.83, Ghana 46.24, Hong Kong 18.08, Barbados 1.60. Under
+the record condition version v2 ordered France 39.45, India 33.00, Ghana 18.85, Hong Kong
+18.50, Barbados 3.14, a Spearman correlation of 1.0000 with an exact two-sided p of 0.0167 over
+all 120 permutations, matching version v1. The gap between Ghana at 18.85 and Hong Kong at
+18.50 is 0.35 points. At temperature zero Ghana returns 18.50 in all five replicates and Hong
+Kong returns 18.50 in all five replicates. A tie at 18.50 costs the correlation, and the
+correlation falls to 0.9747 with an exact p of 0.0333. At temperature one
+Ghana reaches 19.20 against Hong Kong at 18.50 and the correlation is 1.0000. A rank
+reproduction resting on 0.35 points is reported as a fragile margin and not as a reliable
+ordering.
+
+**Under training data alone the ordering did not improve, and temperature one made the ordering
+worse.** Version v2 under training data alone reached a Spearman correlation of 0.9000 with an
+exact p of 0.0833, the same figure version v1 reached, so the score field changed the resolution
+of the holistic score without changing the sequence of the five countries. At temperature zero the
+correlation is 0.9000 and at temperature one the correlation falls to 0.7000 with an exact p of
+0.2333, because Hong Kong at 21.00 passes India at 20.60. Scoring from training data alone still
+places Hong Kong above Ghana where the corrected count of national action places Ghana above Hong
+Kong.
+
+**The itemised wording under the record condition transcribes the record and measures nothing
+else.** Across the four fields `strategy_released`, `strategy_year`, `bills_passed` and
+`legislative_mentions` the rendered record fills 13 of the 20 combinations of pilot country and
+field and leaves seven absent, and 10 calls per country give 130 answers where the record carries
+a value and 70 answers where the record leaves the field absent. Under the record condition the
+model returned the value the record carries in all 130 answers and returned null in all 70. Under
+training data alone the same wording matched the record in 28 of the same 130 answers and supplied
+a value in 20 of the same 70. The record condition of the itemised wording therefore establishes
+that the model reads the supplied record and does not measure what the model holds, which is a
+manipulation check rather than a measurement, and section 4.4 records the consequence.
+
+**The training condition of the itemised wording is where disagreement with the administrative
+record appears.** All 50 itemised calls under training data alone returned null for
+`bills_passed` and null for `legislative_mentions`, so the model declines to supply a count from
+training data rather than guessing a count. Hong Kong was reported as having released a national
+AI strategy in 2020 in all 10 itemised training calls, where the sources the audit draws on
+record no release for Hong Kong at all. India was reported as 2021 in all 10 itemised training
+calls against 2018 in the record. France was reported as 2018 in eight of 10 itemised training
+calls and as 2017 in two. Whether a model asserts a release the administrative sources do not
+carry is one of the properties this study measures, and the itemised wording under training data
+alone is what measures the property.
+
+**The score field lowered stated confidence under the record condition and left the training
+condition untouched.** The holistic wording under the record condition returned 40 medium and 10
+high under version v1 and returned 50 medium and no high under version v2. The holistic wording
+under training data alone returned 47 medium and three high under both versions. The itemised
+wording did not change between version v1 and version v2 and the itemised distribution under the
+record condition moved by one call, from nine medium and 41 high to 10 medium and 40 high, which
+is the size of movement temperature one produces with no change of wording at all. Asking for a JSON number rather than
+a fixed decimal format therefore removed every high-confidence holistic answer under the record
+condition.
+
+**No call failed to parse, and the cost of the pass is measured.** All 200 responses parsed to
+`ok`, all 200 ended with a stop reason of `end_turn`, and the 20 cells of the design produced 20
+distinct prompt hashes under four template hashes. The pass took 312.2 seconds, 106,780 input
+tokens and 17,407 output tokens, against 300.5 seconds, 104,680 input tokens and 17,584 output
+tokens for the second pass. The score field raised input tokens by 2.0 per cent and lowered output
+tokens by 1.0 per cent. Against the 93,100 input tokens of the first pass, the rewritten anchors,
+the corrected record and the score field together raise input tokens by 14.7 per cent, and the
+projection for Stage C in section 7.4 rises by the same fraction.
+
 ---
 
 ## 8. Deposit
@@ -609,3 +761,6 @@ with the existing deposit without a schema change.
 | 2026-09-29 | Second pass of Stage A ran in full, 200 calls on Claude Haiku 4.5 under instrument version v1 and record version 2, recorded in `runs/stage_a_v1.jsonl`. Section 7.5 added, holding what the 200 calls measured. The rewritten anchors broke the ladder, returning 17 distinct scores against nine and a highest score of 38.5 against 28.0, and every holistic cell at temperature one now varies across replicates against seven of 10 before. Under the record condition the model reproduced the ordering of the corrected count of national action exactly across the five pilot countries, and Ghana, the only corrected country among the five, gained 11.80 points where no other pilot country moved more than 3.10. |
 | 2026-09-29 | Instrument version v2. Version v1 asked for the holistic score "to one decimal place" and all 100 holistic calls returned the score in quotation marks, where version v0 returned a JSON number in all 100. Asking for a fixed number of decimal places asks for a format, and a format with a guaranteed decimal place is written as text. No score is affected, because the parse rule converts a numeric string and names the conversion, but the count of responses that followed the schema exactly fell from 194 of 200 to 85 of 200, and a compliance rate driven by the wording of the prompt would describe the instrument and not the model. Version v2 asks for a JSON number without quotation marks in the schema and asks for a fractional score in the anchor paragraph, and changes nothing else, so a comparison of version v1 with version v2 isolates the score field. |
 | 2026-09-29 | Documentation only, no design choice touched. `RESUME.md` added at the repository root, holding the state of the work, every decision taken with the reason, the standing rules for working on the project, the commands, the open questions and a dated session log, so that a Claude Code session on the Sentient Futures workspace account can read the project from the beginning and continue the work. `README.md` brought up to date, with `scoring/corrections.py` added to the layout table, the correction check and the reparse command added to the order of work, and the contamination guarantee corrected to state that both counts of national action are withheld from every prompt. |
+| 2026-09-29 | Third pass of Stage A ran in full, 200 calls on Claude Haiku 4.5 under instrument version v2 and record version 2, recorded in `runs/stage_a_v2.jsonl`. Section 7.6 added, holding what the 200 calls measured. The score field change did what the change was made to do. The holistic wording returned 25 distinct scores against 17, the highest score rose to 42.5, holistic conversions fell from 100 to two, and the count of responses that followed the schema exactly rose from 85 of 200 to 183 of 200. Under the record condition the model reproduced the ordering of the corrected count of national action again, and the margin between Ghana and Hong Kong carrying the reproduction is 0.35 points, which is reported as fragile. |
+| 2026-09-29 | Correction to a figure section 4.5 carried. Section 4.5 had recorded the scored value as exactly deterministic at temperature zero, measured on the first pass of Stage A, and instrument version v2 returned one identical score in seven of the 10 holistic cells at temperature zero rather than in all 10. The decision of temperature one with five replicates stands, because temperature one returns a mean within-cell standard deviation of 3.29 points against 0.60 at temperature zero and because a replicate variance component measured at temperature zero would now rest on three holistic cells out of 10. Section 4.5 states the amended figures and names the pass each figure comes from. |
+| 2026-09-29 | Section 4.4 narrowed, and the wording question inside section 4.4 is settled while the label stays OPEN for the cost question alone. Instrument version v2 is the holistic wording the full run uses. The record condition of Instrument B is recorded as a manipulation check rather than a measurement, because the itemised wording returned the value the rendered record carries in all 130 answers where the record carries a value for a pilot country and returned null in all 70 answers where the record leaves the field absent, including 20 answers where the same wording under training data alone supplied a value from the model's own knowledge. Item-level accuracy for Instrument B is therefore computed on the training condition. Whether both instruments enter the full run as a facet of the reliability design waits on `PRICES`. |
