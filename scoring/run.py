@@ -288,6 +288,7 @@ def cmd_run(args) -> int:
                 row |= {
                     "outcome": parsed["outcome"], "value": parsed["value"],
                     "detail": parsed["detail"], "raw": res["text"],
+                    "coerced": parsed["coerced"], "parser": P.PARSER_VERSION,
                     "model_version": res["model_version"],
                     "stop_reason": res["stop_reason"],
                     "input_tokens": res["input_tokens"],
@@ -349,6 +350,62 @@ def cmd_report(args) -> int:
     else:
         print("no call is priced. Fill PRICES in scoring/config.py from each "
               "provider's price page, then rerun this report.")
+    return 0
+
+
+def cmd_reparse(args) -> int:
+    """Re-read the stored responses in a ledger under the current parse rule.
+
+    The ledger is append-only and is never rewritten, because a ledger records
+    what each provider returned and that record does not change when a parse rule
+    changes. Every response is stored in the "raw" field, so a changed rule is
+    applied by reading the ledger and writing a separate parse table beside the
+    ledger, which costs nothing and calls no provider. The parse table names the
+    parser version that produced the table, and an analysis reads the parse table
+    rather than the ledger.
+    """
+    ledger = Path(args.ledger)
+    rows = list(read_ledger(ledger).values())
+    out = ledger.with_suffix(f".parsed_v{P.PARSER_VERSION}.jsonl")
+    before, after, moved = Counter(), Counter(), []
+    with out.open("w") as fh:
+        for row in rows:
+            before[row["outcome"]] += 1
+            if row.get("raw") is None:
+                after[row["outcome"]] += 1
+                fh.write(json.dumps(row) + "\n")
+                continue
+            parsed = P.parse(row["raw"], row["instrument"])
+            after[parsed["outcome"]] += 1
+            if parsed["outcome"] != row["outcome"]:
+                moved.append((row, parsed))
+            fh.write(json.dumps(row | {
+                "outcome": parsed["outcome"], "value": parsed["value"],
+                "detail": parsed["detail"], "coerced": parsed["coerced"],
+                "parser": P.PARSER_VERSION,
+            }) + "\n")
+
+    print(f"{len(rows)} responses re-read from {ledger.name} into {out.name}, "
+          f"under parser version {P.PARSER_VERSION}. No provider was called and "
+          f"{ledger.name} was not modified.")
+    print()
+    print(f"  {'outcome':18} {'as recorded':>12} {'re-read':>10}")
+    for outcome in P.RUN_OUTCOMES:
+        if before[outcome] or after[outcome]:
+            print(f"  {outcome:18} {before[outcome]:12} {after[outcome]:10}")
+    coerced = [r for r in map(json.loads, out.read_text().splitlines())
+               if r.get("coerced")]
+    print()
+    print(f"  {len(moved)} responses changed outcome under the current rule")
+    for row, parsed in moved[:10]:
+        print(f"    {row['instrument']} {row['condition']} {row['iso3']} "
+              f"temp {row['temperature']:g} rep {row['replicate']}, "
+              f"{row['outcome']} to {parsed['outcome']}"
+              + (f", converted {', '.join(parsed['coerced'])}"
+                 if parsed["coerced"] else ""))
+    print(f"  {len(coerced)} responses carried the right answer in the wrong type "
+          f"and needed a conversion, so the count of responses that followed the "
+          f"schema exactly is {after['ok'] - len(coerced)} of {len(rows)}")
     return 0
 
 
@@ -503,6 +560,11 @@ def main(argv=None) -> int:
     b = sub.add_parser("budget", help="project every stage from a ledger and the prices")
     b.add_argument("ledger")
     b.set_defaults(fn=cmd_budget)
+
+    rp = sub.add_parser("reparse", help="re-read stored responses under the "
+                                        "current parse rule, calling no provider")
+    rp.add_argument("ledger")
+    rp.set_defaults(fn=cmd_reparse)
 
     args = ap.parse_args(argv)
     return args.fn(args)

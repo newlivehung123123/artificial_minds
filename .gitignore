@@ -3,8 +3,12 @@ __pycache__/
 .DS_Store
 .env
 
-# Ledgers are the research record and belong in the Dataverse deposit, not in git.
-# Stub output is never research data.
+# A ledger of real calls is the research record and is tracked, because every
+# Stage A decision has to be checkable against the responses that produced the
+# decision. Stub output is never research data. A parse table is derived from a
+# ledger by `scoring.run reparse`, which calls no provider, so a parse table is
+# regenerated rather than stored.
 runs/stub_test.jsonl
 runs/*.tmp
 runs/stage_a_stub.jsonl
+runs/*.parsed_v*.jsonl
