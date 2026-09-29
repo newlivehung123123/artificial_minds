@@ -185,6 +185,29 @@ def cmd_run(args) -> int:
                   "the harness with no key and no spending."
             )
 
+    # A spend cap counts dollars, and a dollar figure exists only for a model whose
+    # price has been filled in by hand. With no price the running total stays at
+    # zero, the cap never binds, and a run that looked capped would have run to the
+    # end of the grid. A cap that silently does nothing is worse than no cap at
+    # all, so the run stops here and names both repairs.
+    if args.spend_cap and not args.stub:
+        unpriced = sorted({
+            C.MODELS[m].label for m in models
+            if C.PRICES.get(m, {}).get("input") is None
+            or C.PRICES.get(m, {}).get("output") is None
+        })
+        if unpriced:
+            sys.exit(
+                f"no call was made and no line was written, because --spend-cap "
+                f"{args.spend_cap} cannot bind. A spend cap adds up the cost of "
+                f"each call, and no price is filled in for these models:\n  "
+                + "\n  ".join(unpriced)
+                + f"\n\nEither fill PRICES in {C.PROJECT / 'scoring' / 'config.py'} "
+                  "from the published price page, with the date read, or drop "
+                  "--spend-cap and limit the run with --max-calls, which counts "
+                  "calls and needs no price."
+            )
+
     roles = {C.MODELS[m].role for m in models}
     if roles == {"pilot"}:
         print("pilot models only. No score in this ledger may enter a "

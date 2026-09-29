@@ -161,6 +161,17 @@ PRICES: dict[str, dict[str, float | None]] = {
     key: {"input": None, "output": None, "read_on": None} for key in MODELS
 }
 
+# Fill a price by removing the hash marks from the matching block below and typing
+# the two numbers read from the price page, together with the date the page was
+# read. A price is never guessed and never carried over from an earlier model of
+# the same family, because a family name is not a price. Until a price is filled
+# in, `scoring.run report` and `scoring.run budget` count tokens and leave every
+# dollar figure blank, and `--spend-cap` refuses to run rather than pretending to
+# cap a run it cannot cost.
+
+# PRICES["claude_haiku_4_5"] = {"input": 0.00, "output": 0.00, "read_on": "2026-09-29"}
+# PRICES["claude_opus_5"] = {"input": 0.00, "output": 0.00, "read_on": "2026-09-29"}
+
 # --- Design ----------------------------------------------------------------
 
 CONDITIONS = ("training", "record")
