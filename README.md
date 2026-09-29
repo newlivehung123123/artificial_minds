@@ -60,11 +60,26 @@ cp .env.example .env          # paste one key per line, .gitignore excludes .env
 python -m scoring.run models
 python -m scoring.run models --providers anthropic,openai   # or a few at a time
 
-# 6. Run the pilot, capped, one provider at a time while costs are unknown
-python -m scoring.run run --countries pilot --models claude_opus_5 \
-    --max-calls 20 --sleep 0.5 --out runs/pilot.jsonl
-python -m scoring.run report runs/pilot.jsonl
+# 6. Stage A of the pilot, on one cheap model outside the six, which settles the
+#    instrument wording and the parse schema. Start with 20 calls, then lift the cap.
+python -m scoring.run run --countries pilot --models claude_haiku_4_5 \
+    --max-calls 20 --sleep 0.5 --out runs/stage_a.jsonl
+python -m scoring.run report runs/stage_a.jsonl
+
+# 7. Price the whole design from the tokens Stage A measured
+python -m scoring.run budget runs/stage_a.jsonl
+
+# 8. Stage B, the six confirmatory models under the wording Stage A chose.
+#    The wording below is holistic only as an example. Stage A decides.
+python -m scoring.run run --countries pilot --instruments holistic \
+    --max-calls 60 --sleep 0.5 --out runs/stage_b.jsonl
+python -m scoring.run budget runs/stage_b.jsonl
 ```
+
+Stage A and Stage B never share a ledger. The harness exits rather than writing a pilot score
+and a confirmatory score into one file, so no filtering step stands between a raw ledger and an
+analysis. Section 7.3 of `PLAN.md` states what each stage settles and why Stage B cannot be
+replaced by Stage A at any price.
 
 Step five reports one of three outcomes for every identifier. CONFIRMED means the provider
 serves that identifier. NOT SERVED means the identifier in `scoring/config.py` is wrong, and

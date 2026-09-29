@@ -7,3 +7,4 @@ __pycache__/
 # Stub output is never research data.
 runs/stub_test.jsonl
 runs/*.tmp
+runs/stage_a_stub.jsonl

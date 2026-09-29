@@ -105,7 +105,25 @@ class Model:
     developer: str
     weights: str              # "closed" or "open"
     built_in: str
+    role: str = "confirmatory"   # "confirmatory" or "pilot", see below
 
+
+# Two roles, and no score ever crosses from one role to the other.
+#
+# A confirmatory model is one of the six the proposal names, and every score the
+# study reports comes from a confirmatory model.
+#
+# A pilot model is a cheap model used to settle the instrument wording and the
+# parse schema, which are sections 4.4 and 5 of PLAN.md. Settling the wording on
+# a model outside the six is stronger than settling the wording on one of the six,
+# because a wording chosen on a model the study reports could have been chosen,
+# however unintentionally, to suit that model. A prompt a small model returns as
+# valid JSON is also returned as valid JSON by a larger model of the same family,
+# so a pilot model is the harder test of a wording and the cheaper one.
+#
+# Refusal rates, token counts and replicate variation do not transfer between
+# models, so sections 7.2.1, 7.2.3, 7.2.4 and 7.2.5 need the six confirmatory
+# models and cannot be answered by a pilot model at any price.
 
 MODELS = {
     "claude_opus_5": Model("claude_opus_5", "Claude Opus 5", "anthropic",
@@ -120,7 +138,21 @@ MODELS = {
                      "kimi-k3", "Moonshot AI", "open", "China"),
     "glm_5_2": Model("glm_5_2", "GLM-5.2", "zai",
                      "glm-5.2", "Z.ai", "open", "China"),
+
+    # Pilot workhorse. Haiku 4.5 is the cheapest model Anthropic serves and the
+    # identifier below is a dated release identifier rather than an alias, so the
+    # weights behind the identifier do not move under the pilot. Add a second
+    # pilot model the same way once `run models` prints the listing of a provider,
+    # for example the cheapest chat model DeepSeek serves.
+    "claude_haiku_4_5": Model("claude_haiku_4_5", "Claude Haiku 4.5", "anthropic",
+                              "claude-haiku-4-5-20251001", "Anthropic", "closed",
+                              "United States", "pilot"),
 }
+
+# The six the proposal names. Every default in the harness is this tuple and never
+# MODELS, so a pilot model is called only when a command names the pilot model.
+CONFIRMATORY = tuple(k for k, m in MODELS.items() if m.role == "confirmatory")
+PILOT_MODELS = tuple(k for k, m in MODELS.items() if m.role == "pilot")
 
 # US dollars per million tokens. Filled in by hand from the price page of each
 # provider, with the date read. A None leaves cost uncomputed and token counts
@@ -137,6 +169,36 @@ REPLICATES = 5
 TEMPERATURES = (0.0, 1.0)          # pilot runs both, the frozen plan names one
 
 MAX_OUTPUT_TOKENS = 1500
+
+# --- Size of each stage ----------------------------------------------------
+# Every factor is written out, so the arithmetic behind a call count in any report
+# is checkable without reading code. Stage A runs on one cheap pilot model and
+# settles the instrument wording and the parse schema. Stage B runs on the six
+# confirmatory models under the wording Stage A chose, and answers the questions
+# that do not transfer between models, namely refusal rate, token count and
+# replicate variation. Stage C is the run the proposal reports.
+
+STAGES = [
+    {"code": "A", "name": "instrument shake-down, one pilot model", "role": "pilot",
+     "factors": {"models": 1, "countries": 5, "instruments": 2, "conditions": 2,
+                 "temperatures": 2, "replicates": 5}},
+    {"code": "B", "name": "per-provider probe, six confirmatory models",
+     "role": "confirmatory",
+     "factors": {"models": 6, "countries": 5, "instruments": 1, "conditions": 2,
+                 "temperatures": 2, "replicates": 5}},
+    {"code": "C", "name": "confirmatory run, six confirmatory models",
+     "role": "confirmatory",
+     "factors": {"models": 6, "countries": 122, "instruments": 1, "conditions": 2,
+                 "temperatures": 1, "replicates": 5}},
+]
+
+
+def stage_calls(stage: dict) -> int:
+    n = 1
+    for value in stage["factors"].values():
+        n *= value
+    return n
+
 
 # --- Administrative record -------------------------------------------------
 # Allow-list. scoring/record.py renders these columns and nothing else, and

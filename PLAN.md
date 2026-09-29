@@ -261,10 +261,29 @@ does not score Hong Kong.
 5. A generalisability coefficient on pilot data alone, reported as a pilot figure that no
    confirmatory analysis uses.
 
-### 7.3 Size
+### 7.3 Stages and size — FIXED 2026-09-29
 
-Five countries by six models by two conditions by five replicates is 300 calls per
-instrument and per temperature setting.
+The pilot runs in two stages, and the arithmetic of every stage is held in `STAGES` in
+`scoring/config.py` and printed by `python -m scoring.run budget`.
+
+| Stage | Models | Calls | What the stage settles |
+|---|---|---|---|
+| A | one cheap model outside the six | 200 | The instrument wording of section 4.4 and the parse schema of section 5 |
+| B | the six confirmatory models | 600 | Cost per call, parse outcome rate, replicate variation and temperature, so sections 7.2.1, 7.2.3, 7.2.4 and 7.2.5 |
+| C | the six confirmatory models | 7,320 | The study the proposal reports |
+
+Stage A runs on a model the study never reports, which is stronger than running Stage A on one
+of the six. A wording chosen on a reported model could have been chosen, however
+unintentionally, to suit that model. A wording that a small model returns as valid JSON is
+also returned as valid JSON by a larger model of the same family, so Stage A is the harder test
+of a wording as well as the cheaper test.
+
+Refusal rate, token count and replicate variation do not transfer between models, so Stage B
+cannot be replaced by Stage A at any price. Stage B is also where a model that emits reasoning
+tokens reveals the true output cost of the design, before Stage C commits 7,320 calls.
+
+The harness refuses to write pilot scores and confirmatory scores into one ledger, so no
+filtering step stands between a raw ledger and an analysis.
 
 ---
 
@@ -283,3 +302,4 @@ with the existing deposit without a schema change.
 |---|---|
 | 2026-09-29 | Document created. Sections 2, 3, 4.1, 4.2, 4.3, 4.6, 6.1 and 7.1 set to FIXED. Sections 4.4, 4.5, 5 and 6.2 set to OPEN. |
 | 2026-09-29 | Operational only, no design choice touched. Keys moved to a `.env` file that git never tracks, and `scoring.run models` now separates a wrong identifier from an unchecked identifier. |
+| 2026-09-29 | Section 7.3 rewritten. The pilot splits into Stage A on one cheap model outside the six, which settles the instrument wording and the parse schema, and Stage B on the six confirmatory models, which settles what does not transfer between models. Stage A lowers the cost of the pilot and removes the possibility that a wording was chosen to suit a reported model. |

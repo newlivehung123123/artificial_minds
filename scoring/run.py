@@ -159,7 +159,19 @@ def cmd_run(args) -> int:
     done = read_ledger(out)
 
     countries = _countries(args.countries)
-    models = args.models.split(",") if args.models else list(C.MODELS)
+    models = args.models.split(",") if args.models else list(C.CONFIRMATORY)
+    unknown = [m for m in models if m not in C.MODELS]
+    if unknown:
+        sys.exit(f"no such model: {', '.join(unknown)}. Choose from "
+                 f"{', '.join(C.MODELS)}.")
+    roles = {C.MODELS[m].role for m in models}
+    if roles == {"pilot"}:
+        print("pilot models only. No score in this ledger may enter a "
+              "confirmatory analysis.")
+    elif len(roles) > 1:
+        sys.exit("a ledger holds one role. Run the pilot models and the "
+                 "confirmatory models into separate ledgers, so no filtering step "
+                 "stands between the raw ledger and the analysis.")
     inst = args.instruments.split(",") if args.instruments else list(C.INSTRUMENTS)
     conds = args.conditions.split(",") if args.conditions else list(C.CONDITIONS)
     temps = [float(t) for t in args.temperatures.split(",")] if args.temperatures \
@@ -207,6 +219,7 @@ def cmd_run(args) -> int:
                 "cell": cell_id(*cell), "written_at": now(),
                 "model": model_key, "model_label": C.MODELS[model_key].label,
                 "provider": C.MODELS[model_key].provider,
+                "role": C.MODELS[model_key].role,
                 "iso3": iso3, "country": prompt["country"],
                 "instrument": instrument, "instrument_version": I.VERSION,
                 "condition": condition, "replicate": replicate,
@@ -259,6 +272,11 @@ def cmd_report(args) -> int:
         sys.exit(f"no rows in {args.ledger}")
     stubbed = sum(1 for r in rows if r.get("stub"))
     print(f"{len(rows)} attempts, {stubbed} from the stub provider")
+    roles = Counter(r.get("role", "role not recorded") for r in rows)
+    print(f"role: {', '.join(f'{n} {name}' for name, n in roles.most_common())}")
+    if roles.get("pilot"):
+        print("A pilot score settles the instrument wording and the parse schema "
+              "and enters no confirmatory analysis.")
     print()
     by_model: dict[str, Counter] = {}
     tokens: dict[str, list[int]] = {}
@@ -285,6 +303,67 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_budget(args) -> int:
+    """Project every stage from measured token counts and hand-entered prices.
+
+    Token counts come from a ledger and prices come from scoring/config.py, so a
+    figure printed here is a measurement multiplied by a published price and never
+    an estimate. A model with no price filled in is listed as unpriced rather than
+    left out, so a missing price cannot quietly shrink a projection.
+    """
+    rows = list(read_ledger(Path(args.ledger)).values())
+    real = [r for r in rows if not r.get("stub") and r.get("input_tokens")]
+    used = real or [r for r in rows if r.get("input_tokens")]
+    if not used:
+        sys.exit(f"{args.ledger} holds no token count to project from")
+    if not real:
+        print("WARNING every row in this ledger comes from the stub provider. The "
+              "input count is the real prompt, so the input projection holds, and "
+              "the output count is invented by the stub, so every output figure "
+              "and every cost below is meaningless until one real call replaces it.")
+        print()
+
+    mean_in = sum(r["input_tokens"] for r in used) / len(used)
+    mean_out = sum(r.get("output_tokens") or 0 for r in used) / len(used)
+    print(f"measured over {len(used)} calls in {Path(args.ledger).name}, mean "
+          f"{mean_in:,.0f} input tokens and {mean_out:,.0f} output tokens per call")
+
+    priced = {k: v for k, v in C.PRICES.items()
+              if v.get("input") is not None and v.get("output") is not None}
+    for stage in C.STAGES:
+        calls = C.stage_calls(stage)
+        keys = (list(C.PILOT_MODELS)[:stage["factors"]["models"]]
+                if stage["role"] == "pilot" else list(C.CONFIRMATORY))
+        per_model = calls // max(1, len(keys))
+        print()
+        print(f"stage {stage['code']}  {stage['name']}")
+        print("  " + " x ".join(f"{v} {k}" for k, v in stage["factors"].items())
+              + f" = {calls:,} calls, {per_model:,} per model")
+        print(f"  {calls * mean_in / 1e6:.2f} million input tokens, "
+              f"{calls * mean_out / 1e6:.2f} million output tokens")
+        total, unpriced = 0.0, []
+        for key in keys:
+            price = priced.get(key)
+            if price is None:
+                unpriced.append(C.MODELS[key].label)
+                continue
+            cost = (per_model * mean_in / 1e6 * price["input"]
+                    + per_model * mean_out / 1e6 * price["output"])
+            total += cost
+            print(f"    {C.MODELS[key].label:20} ${cost:9,.2f}   "
+                  f"at ${price['input']}/${price['output']} per million, "
+                  f"read {price['read_on']}")
+        if total:
+            print(f"    {'priced subtotal':20} ${total:9,.2f}")
+        if unpriced:
+            print(f"    unpriced, so absent from the subtotal above: "
+                  f"{', '.join(unpriced)}")
+    print()
+    print("Fill PRICES in scoring/config.py from each price page, with the date "
+          "read, and rerun to price the models listed as unpriced.")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="scoring.run")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -298,7 +377,9 @@ def main(argv=None) -> int:
 
     r = sub.add_parser("run", help="collect scores")
     r.add_argument("--countries", default="pilot", help="pilot | all | FRA,IND,...")
-    r.add_argument("--models", default="")
+    r.add_argument("--models", default="",
+                   help="default is the six confirmatory models. Name a pilot "
+                        "model to settle the instrument cheaply.")
     r.add_argument("--instruments", default="")
     r.add_argument("--conditions", default="")
     r.add_argument("--temperatures", default="")
@@ -315,6 +396,10 @@ def main(argv=None) -> int:
     p = sub.add_parser("report", help="summarise a ledger")
     p.add_argument("ledger")
     p.set_defaults(fn=cmd_report)
+
+    b = sub.add_parser("budget", help="project every stage from a ledger and the prices")
+    b.add_argument("ledger")
+    b.set_defaults(fn=cmd_budget)
 
     args = ap.parse_args(argv)
     return args.fn(args)
