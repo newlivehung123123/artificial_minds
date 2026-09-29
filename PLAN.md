@@ -266,11 +266,27 @@ measure transcription. Item-level accuracy for Instrument B is computed on the t
 and the itemised record condition is reported as evidence that the rendered record reaches the
 model.
 
-What remains open is whether the measured cost allows both instruments in the full run with the
-instrument entering the reliability design as a facet. Section 4.4 cannot close the cost question
-until `PRICES` in `scoring/config.py` carries a price for each of the six models, read from each
-provider's own published price page. Every token count the projection needs is already measured
-and recorded in section 7.4 and section 7.6.
+**The cost of carrying both wordings was measured on 2026-09-29 and comes to about 21 US
+dollars.** `PRICES` in `scoring/config.py` now carries a price for each of the seven models, read
+on 2026-09-29 from the published price page of each provider, and every page is named in the
+comment above the price. Running `python -m scoring.run budget runs/stage_a_v2.jsonl` prices the
+whole design from the token counts the third pass of Stage A measured. The holistic wording alone
+costs 1.61 dollars at Stage B and 19.65 dollars at Stage C, a total of 21.26 dollars. Carrying
+both wordings adds 1.57 dollars at Stage B and 19.20 dollars at Stage C, so the whole study costs
+42.03 dollars instead of 21.26 dollars and the addition is 20.77 dollars. Stage B doubles from 600
+calls to 1,200 and Stage C doubles from 7,320 calls to 14,640.
+
+Carrying both wordings is what section 4.4 recommends on the measured cost. The Digital Minds
+Research Sprint found 87.6 per cent of the variance separating one model from another in the
+combination of the model, the prompt format and the outcome, so a design carrying one wording
+cannot estimate how much the wording contributes and reports a generalisability coefficient that
+is optimistic by an unknown amount. Paying 20.77 dollars to turn the wording from an unmeasured
+assumption into a measured facet is the whole reason section 4.4 piloted two wordings.
+
+Section 4.4 stays labelled OPEN until Jason Hung confirms that the fellowship budget allows 42.03
+dollars, because no budget figure is recorded anywhere in this repository and the cost falls on
+his own API accounts. Confirming the budget is the only step left, and the measured numbers above
+are the whole of the evidence the confirmation needs.
 
 ### 4.5 Temperature and replicate count — FIXED 2026-09-29
 
@@ -764,3 +780,4 @@ with the existing deposit without a schema change.
 | 2026-09-29 | Third pass of Stage A ran in full, 200 calls on Claude Haiku 4.5 under instrument version v2 and record version 2, recorded in `runs/stage_a_v2.jsonl`. Section 7.6 added, holding what the 200 calls measured. The score field change did what the change was made to do. The holistic wording returned 25 distinct scores against 17, the highest score rose to 42.5, holistic conversions fell from 100 to two, and the count of responses that followed the schema exactly rose from 85 of 200 to 183 of 200. Under the record condition the model reproduced the ordering of the corrected count of national action again, and the margin between Ghana and Hong Kong carrying the reproduction is 0.35 points, which is reported as fragile. |
 | 2026-09-29 | Correction to a figure section 4.5 carried. Section 4.5 had recorded the scored value as exactly deterministic at temperature zero, measured on the first pass of Stage A, and instrument version v2 returned one identical score in seven of the 10 holistic cells at temperature zero rather than in all 10. The decision of temperature one with five replicates stands, because temperature one returns a mean within-cell standard deviation of 3.29 points against 0.60 at temperature zero and because a replicate variance component measured at temperature zero would now rest on three holistic cells out of 10. Section 4.5 states the amended figures and names the pass each figure comes from. |
 | 2026-09-29 | Section 4.4 narrowed, and the wording question inside section 4.4 is settled while the label stays OPEN for the cost question alone. Instrument version v2 is the holistic wording the full run uses. The record condition of Instrument B is recorded as a manipulation check rather than a measurement, because the itemised wording returned the value the rendered record carries in all 130 answers where the record carries a value for a pilot country and returned null in all 70 answers where the record leaves the field absent, including 20 answers where the same wording under training data alone supplied a value from the model's own knowledge. Item-level accuracy for Instrument B is therefore computed on the training condition. Whether both instruments enter the full run as a facet of the reliability design waits on `PRICES`. |
+| 2026-09-29 | `PRICES` filled for all seven models, read on 2026-09-29 from the published price page of each provider, with every page named in the comment above the price. Three providers publish more than one price for the same model, so the rule applied is to take the price this study would actually pay and, where two prices could both apply, to take the higher one, because a spend cap built on the lower price would fail to cap. The whole design is now priced from the token counts the third pass of Stage A measured. The holistic wording alone costs 21.26 dollars and carrying both wordings costs 42.03 dollars. Section 4.4 recommends carrying both wordings and stays OPEN only until Jason Hung confirms the budget. Filling `PRICES` also lets `--spend-cap` bind on Stage B, which refused to start while any price was unknown. |

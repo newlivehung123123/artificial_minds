@@ -114,9 +114,13 @@ this package reads `.env` at import, so a key is typed once and works in every t
 name already set in the environment wins over the file, so one run can use a different key
 without editing anything.
 
-Fill `PRICES` in `scoring/config.py` by hand from each provider's published price page, with
-the date read. Until a price is filled in, token counts are recorded and cost is left blank,
-so no cost figure in any report is invented.
+`PRICES` in `scoring/config.py` carries a price for all seven models, read on 2026-09-29 from
+the published price page of each provider, with the address of the page and the date read in the
+comment above the price. Where a provider publishes more than one price for the same model, the
+comment names every published price and says which price was taken and why. A price is never
+written from memory and never carried over from an earlier model of the same family, and until a
+price is filled in, token counts are recorded and cost is left blank, so no cost figure in any
+report is invented.
 
 ## Two guarantees the code enforces rather than trusts
 

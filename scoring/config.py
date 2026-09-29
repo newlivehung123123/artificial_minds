@@ -169,8 +169,44 @@ PRICES: dict[str, dict[str, float | None]] = {
 # dollar figure blank, and `--spend-cap` refuses to run rather than pretending to
 # cap a run it cannot cost.
 
-# PRICES["claude_haiku_4_5"] = {"input": 0.00, "output": 0.00, "read_on": "2026-09-29"}
-# PRICES["claude_opus_5"] = {"input": 0.00, "output": 0.00, "read_on": "2026-09-29"}
+# Every price below was read on 2026-09-29 from the page named above the price.
+# Prices are US dollars per million tokens, matching the division by 1e6 in
+# scoring/providers.py.
+#
+# Three providers publish more than one price for the same model, so the rule
+# applied here is to take the price a run of this study would actually pay and,
+# where two prices could both apply, to take the higher one. A spend cap built on
+# the lower price would fail to cap. Cache prices are never taken, because a cache
+# hit is not guaranteed and a study that assumed a hit would under-report cost.
+
+# https://platform.claude.com/docs/en/about-claude/pricing
+PRICES["claude_haiku_4_5"] = {"input": 1.00, "output": 5.00, "read_on": "2026-09-29"}
+PRICES["claude_opus_5"] = {"input": 5.00, "output": 25.00, "read_on": "2026-09-29"}
+
+# https://developers.openai.com/api/docs/pricing
+# The page prices gpt-5.6-sol twice, at $4.00 and $20.00 for short context and at
+# $8.00 and $30.00 for long context. Every prompt in this study is under 1,000
+# tokens, measured in runs/stage_a_v2.jsonl, so the short-context price applies.
+PRICES["gpt_5_6_sol"] = {"input": 4.00, "output": 20.00, "read_on": "2026-09-29"}
+
+# https://ai.google.dev/gemini-api/docs/pricing
+# The page prices the model as Gemini 3.1 Pro Preview, and prices prompts of
+# 200,000 tokens or fewer at $2.00 and $12.00. The identifier in MODELS is
+# gemini-3.1-pro and the identifier on the price page is gemini-3.1-pro-preview,
+# so `python -m scoring.run models` has to confirm the identifier before Stage B.
+PRICES["gemini_3_1_pro"] = {"input": 2.00, "output": 12.00, "read_on": "2026-09-29"}
+
+# https://api-docs.deepseek.com/quick_start/pricing
+# The page prices peak hours at $1.32 and $3.96 and off-peak hours at $0.66 and
+# $1.98, both on a cache miss. Peak is taken, because the hour a run starts is not
+# fixed in advance.
+PRICES["deepseek_v4_pro"] = {"input": 1.32, "output": 3.96, "read_on": "2026-09-29"}
+
+# https://platform.kimi.ai/docs/pricing/chat
+PRICES["kimi_k3"] = {"input": 3.00, "output": 15.00, "read_on": "2026-09-29"}
+
+# https://docs.z.ai/guides/overview/pricing
+PRICES["glm_5_2"] = {"input": 1.40, "output": 4.40, "read_on": "2026-09-29"}
 
 # --- Design ----------------------------------------------------------------
 
