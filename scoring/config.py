@@ -8,11 +8,12 @@ same 122 countries.
 
 Nothing in this file is authoritative until confirmed empirically:
 
-  * every MODELS[...].api_id is confirmed against the model listing of the provider
-    by `python -m scoring.run models` before the pilot runs
-  * every PROVIDERS[...].base_url is confirmed by the same command
-  * every price in PRICES is copied from the published price page of the provider
-    by hand, and a price left as None means cost is not computed, only tokens counted
+  * every MODELS[...].api_id, pin and batch endpoint of a confirmatory model is
+    confirmed against the public endpoint listing of OpenRouter by
+    `python -m scoring.run models`, which needs no key and spends nothing
+  * every price in PRICES and BATCH_PRICES is copied from a published price
+    listing by hand, with the address and the date read, and a price left as
+    None means cost is not computed, only tokens counted
 
 See PLAN.md for the status of every design choice.
 """
@@ -81,18 +82,16 @@ class Provider:
 
 
 PROVIDERS = {
+    # The pilot model ran Stage A through Anthropic directly and stays on the same
+    # route, so the three Stage A ledgers can be reproduced exactly as the ledgers ran.
     "anthropic": Provider("anthropic", "anthropic", "ANTHROPIC_API_KEY", None),
-    "openai": Provider("openai", "openai_compat", "OPENAI_API_KEY", None),
-    # Google serves Gemini through an OpenAI-compatible endpoint, which keeps one
-    # call path for five of the six providers. Confirm with `run models`.
-    "google": Provider("google", "openai_compat", "GEMINI_API_KEY",
-                       "https://generativelanguage.googleapis.com/v1beta/openai/"),
-    "deepseek": Provider("deepseek", "openai_compat", "DEEPSEEK_API_KEY",
-                         "https://api.deepseek.com/v1"),
-    "moonshot": Provider("moonshot", "openai_compat", "MOONSHOT_API_KEY",
-                         "https://api.moonshot.ai/v1"),
-    "zai": Provider("zai", "openai_compat", "ZAI_API_KEY",
-                    "https://api.z.ai/api/paas/v4"),
+    # The six confirmatory models run through OpenRouter, a company that resells
+    # the API of each developer under one key and one account. Jason Hung approved
+    # the OpenRouter route on 2026-10-03 in place of six funded provider accounts.
+    # OpenRouter speaks the OpenAI chat-completions protocol, so one code path
+    # serves all six models.
+    "openrouter": Provider("openrouter", "openai_compat", "OPENROUTER_API_KEY",
+                           "https://openrouter.ai/api/v1"),
 }
 
 
@@ -106,6 +105,34 @@ class Model:
     weights: str              # "closed" or "open"
     built_in: str
     role: str = "confirmatory"   # "confirmatory" or "pilot", see below
+    pin: str | None = None       # the one OpenRouter endpoint a call may reach
+    route: str = "sync"          # "sync" or "batch", see below
+    takes_temperature: bool = True
+
+
+# Three fields govern the OpenRouter route, and all three were read from the
+# public endpoint listing of OpenRouter on 2026-10-03.
+#
+# A pin holds every call of a model to one endpoint. OpenRouter sells most models
+# through several companies, and a company other than the developer may serve the
+# same weights at a lower numerical precision, so an unpinned call could be
+# answered by different hardware from one replicate to the next, and the
+# replicate variation the study measures would then include a change of server.
+# Every pin below names the endpoint the developer runs. When the pinned endpoint
+# is down, the call is refused and is never sent to another company.
+#
+# A route of "batch" sends the calls of a model through the Batch API of
+# OpenRouter at half the price, with results returned within 24 hours. Three
+# developers serve a batch endpoint on their own servers, namely Anthropic,
+# OpenAI and Google. Kimi K3 is served in batch only by DeepInfra, a company
+# other than the developer, so Kimi K3 stays on the sync route at the endpoint
+# Moonshot AI runs. DeepSeek and Z.ai serve no batch endpoint.
+#
+# takes_temperature is False where the pinned endpoint lists no temperature
+# parameter. OpenRouter drops a parameter an endpoint does not take without
+# saying so, so the harness sends a temperature only to an endpoint that lists
+# the parameter, and every ledger row records whether the temperature of the
+# cell was applied.
 
 
 # Two roles, and no score ever crosses from one role to the other.
@@ -126,18 +153,29 @@ class Model:
 # models and cannot be answered by a pilot model at any price.
 
 MODELS = {
-    "claude_opus_5": Model("claude_opus_5", "Claude Opus 5", "anthropic",
-                           "claude-opus-5", "Anthropic", "closed", "United States"),
-    "gpt_5_6_sol": Model("gpt_5_6_sol", "GPT-5.6 Sol", "openai",
-                         "gpt-5.6-sol", "OpenAI", "closed", "United States"),
-    "gemini_3_1_pro": Model("gemini_3_1_pro", "Gemini 3.1 Pro", "google",
-                            "gemini-3.1-pro", "Google DeepMind", "closed", "United States"),
-    "deepseek_v4_pro": Model("deepseek_v4_pro", "DeepSeek V4 Pro", "deepseek",
-                             "deepseek-v4-pro", "DeepSeek", "open", "China"),
-    "kimi_k3": Model("kimi_k3", "Kimi K3", "moonshot",
-                     "kimi-k3", "Moonshot AI", "open", "China"),
-    "glm_5_2": Model("glm_5_2", "GLM-5.2", "zai",
-                     "glm-5.2", "Z.ai", "open", "China"),
+    "claude_opus_5": Model("claude_opus_5", "Claude Opus 5", "openrouter",
+                           "anthropic/claude-opus-5", "Anthropic", "closed",
+                           "United States", pin="anthropic", route="batch",
+                           takes_temperature=False),
+    "gpt_5_6_sol": Model("gpt_5_6_sol", "GPT-5.6 Sol", "openrouter",
+                         "openai/gpt-5.6-sol", "OpenAI", "closed", "United States",
+                         pin="openai", route="batch", takes_temperature=False),
+    # The developer names the model Gemini 3.1 Pro Preview, and the identifier
+    # ends in the suffix. The proposal calls the model Gemini 3.1 Pro.
+    "gemini_3_1_pro": Model("gemini_3_1_pro", "Gemini 3.1 Pro", "openrouter",
+                            "google/gemini-3.1-pro-preview", "Google DeepMind",
+                            "closed", "United States", pin="google-vertex/global",
+                            route="batch"),
+    # The dated identifier names the general release of DeepSeek V4 Pro, and the
+    # endpoint DeepSeek runs serves the dated identifier alone.
+    "deepseek_v4_pro": Model("deepseek_v4_pro", "DeepSeek V4 Pro", "openrouter",
+                             "deepseek/deepseek-v4-pro-0813", "DeepSeek", "open",
+                             "China", pin="deepseek"),
+    "kimi_k3": Model("kimi_k3", "Kimi K3", "openrouter", "moonshotai/kimi-k3",
+                     "Moonshot AI", "open", "China", pin="moonshotai/mxfp4",
+                     takes_temperature=False),
+    "glm_5_2": Model("glm_5_2", "GLM-5.2", "openrouter", "z-ai/glm-5.2",
+                     "Z.ai", "open", "China", pin="z-ai/fp8"),
 
     # Pilot workhorse. Haiku 4.5 is the cheapest model Anthropic serves and the
     # identifier below is a dated release identifier rather than an alias, so the
@@ -154,64 +192,104 @@ MODELS = {
 CONFIRMATORY = tuple(k for k, m in MODELS.items() if m.role == "confirmatory")
 PILOT_MODELS = tuple(k for k, m in MODELS.items() if m.role == "pilot")
 
-# US dollars per million tokens. Filled in by hand from the price page of each
-# provider, with the date read. A None leaves cost uncomputed and token counts
-# are recorded either way, so no number in any report is ever invented.
-PRICES: dict[str, dict[str, float | None]] = {
+# --- Prices ----------------------------------------------------------------
+# US dollars per million tokens, matching the division by 1e6 in
+# scoring/providers.py. Filled in by hand from a published price listing, with the
+# date read. A None leaves cost uncomputed and token counts are recorded either
+# way, so no number in any report is ever invented. A price is never guessed and
+# never carried over from an earlier model of the same family, because a family
+# name is not a price. Until a price is filled in, `scoring.run report` and
+# `scoring.run budget` count tokens and leave every dollar figure blank, and
+# `--spend-cap` refuses to run rather than pretending to cap a run it cannot cost.
+#
+# Where two prices could both apply to a run of this study, the higher price is
+# taken, because a spend cap built on the lower price would fail to cap. A
+# discount the listing marks is therefore never taken, because the listing does
+# not say how long a discount lasts, and cache prices are never taken, because a
+# cache hit is not guaranteed and a study that assumed a hit would under-report
+# cost. `python -m scoring.run models` applies the same rule to the live listing
+# and stops on any price below that no longer matches.
+#
+# PRICES holds the price of the sync route, where each call is answered at once,
+# and BATCH_PRICES holds the price of the batch route of OpenRouter. The price a
+# model pays is read through price() below, which picks the table by the route of
+# the model.
+
+PRICES: dict[str, dict[str, float | str | None]] = {
     key: {"input": None, "output": None, "read_on": None} for key in MODELS
 }
+BATCH_PRICES: dict[str, dict[str, float | str | None]] = {}
 
-# Fill a price by removing the hash marks from the matching block below and typing
-# the two numbers read from the price page, together with the date the page was
-# read. A price is never guessed and never carried over from an earlier model of
-# the same family, because a family name is not a price. Until a price is filled
-# in, `scoring.run report` and `scoring.run budget` count tokens and leave every
-# dollar figure blank, and `--spend-cap` refuses to run rather than pretending to
-# cap a run it cannot cost.
+# A price tier keyed on prompt length applies to this study only where the tier
+# starts below this many prompt tokens. The longest prompt Stage A sent was 815
+# input tokens, read from runs/stage_a_v2.jsonl, and the ceiling is more than ten
+# times that length, so a tokenizer that counts the same text as longer stays
+# well inside.
+PROMPT_TOKEN_CEILING = 10_000
 
-# Every price below was read on 2026-09-29 from the page named above the price.
-# Prices are US dollars per million tokens, matching the division by 1e6 in
-# scoring/providers.py.
-#
-# Three providers publish more than one price for the same model, so the rule
-# applied here is to take the price a run of this study would actually pay and,
-# where two prices could both apply, to take the higher one. A spend cap built on
-# the lower price would fail to cap. Cache prices are never taken, because a cache
-# hit is not guaranteed and a study that assumed a hit would under-report cost.
-
+# The pilot model runs through Anthropic directly, as Stage A ran.
 # https://platform.claude.com/docs/en/about-claude/pricing
 PRICES["claude_haiku_4_5"] = {"input": 1.00, "output": 5.00, "read_on": "2026-09-29"}
-PRICES["claude_opus_5"] = {"input": 5.00, "output": 25.00, "read_on": "2026-09-29"}
 
-# https://developers.openai.com/api/docs/pricing
-# The page prices gpt-5.6-sol twice, at $4.00 and $20.00 for short context and at
-# $8.00 and $30.00 for long context. Every prompt in this study is under 1,000
-# tokens, measured in runs/stage_a_v2.jsonl, so the short-context price applies.
-PRICES["gpt_5_6_sol"] = {"input": 4.00, "output": 20.00, "read_on": "2026-09-29"}
+# Every price below was read on 2026-10-03 from the endpoint listing of OpenRouter,
+# at https://openrouter.ai/api/v1/models/<api_id>/endpoints for the sync route and
+# at https://openrouter.ai/api/v1/models/<api_id>:batch/endpoints for the batch
+# route, in both cases at the endpoint the pin in MODELS names. OpenRouter passes
+# the price of the developer through without a markup and charges a fee on buying
+# credit instead, which no price below includes. The prices read from the price
+# page of each developer on 2026-09-29 are kept in commit 5cddccd.
 
-# https://ai.google.dev/gemini-api/docs/pricing
-# The page prices the model as Gemini 3.1 Pro Preview, and prices prompts of
-# 200,000 tokens or fewer at $2.00 and $12.00. The identifier in MODELS is
-# gemini-3.1-pro and the identifier on the price page is gemini-3.1-pro-preview,
-# so `python -m scoring.run models` has to confirm the identifier before Stage B.
-PRICES["gemini_3_1_pro"] = {"input": 2.00, "output": 12.00, "read_on": "2026-09-29"}
+# Claude Opus 5, endpoint anthropic. The batch endpoint is priced at half.
+PRICES["claude_opus_5"] = {"input": 5.00, "output": 25.00, "read_on": "2026-10-03"}
+BATCH_PRICES["claude_opus_5"] = {"input": 2.50, "output": 12.50, "read_on": "2026-10-03"}
 
-# https://api-docs.deepseek.com/quick_start/pricing
-# The page prices peak hours at $1.32 and $3.96 and off-peak hours at $0.66 and
-# $1.98, both on a cache miss. Peak is taken, because the hour a run starts is not
-# fixed in advance.
-PRICES["deepseek_v4_pro"] = {"input": 1.32, "output": 3.96, "read_on": "2026-09-29"}
+# GPT-5.6 Sol, endpoint openai. The listing prices the sync endpoint at $2.00 and
+# $10.00 and the batch endpoint at $1.00 and $5.00, both under a discount of 0.5
+# that the listing marks, so the full prices are $4.00 and $20.00 and $2.00 and
+# $10.00. The price page of OpenAI showed $4.00 and $20.00 on 2026-09-29. The full
+# price is taken on both routes, under the rule above. A prompt past 272,000
+# tokens is priced higher, and no prompt in this study comes near that length.
+PRICES["gpt_5_6_sol"] = {"input": 4.00, "output": 20.00, "read_on": "2026-10-03"}
+BATCH_PRICES["gpt_5_6_sol"] = {"input": 2.00, "output": 10.00, "read_on": "2026-10-03"}
 
-# https://platform.kimi.ai/docs/pricing/chat
-PRICES["kimi_k3"] = {"input": 3.00, "output": 15.00, "read_on": "2026-09-29"}
+# Gemini 3.1 Pro, endpoint google-vertex/global. The listing prices the sync
+# endpoint at $2.00 and $12.00 and the batch endpoint at $1.00 and $6.00, and
+# prices a prompt past 200,000 tokens higher on both routes, at $4.00 and $18.00
+# and at $2.00 and $9.00. Every prompt in this study is under 1,000 tokens, so the
+# lower tier applies. Reasoning tokens are priced as output tokens on both routes.
+PRICES["gemini_3_1_pro"] = {"input": 2.00, "output": 12.00, "read_on": "2026-10-03"}
+BATCH_PRICES["gemini_3_1_pro"] = {"input": 1.00, "output": 6.00, "read_on": "2026-10-03"}
 
-# https://docs.z.ai/guides/overview/pricing
-PRICES["glm_5_2"] = {"input": 1.40, "output": 4.40, "read_on": "2026-09-29"}
+# DeepSeek V4 Pro, endpoint deepseek. The listing prices the endpoint at $0.66 and
+# $1.98, and at $1.32 and $3.96 in two blocks of hours on weekdays, which the
+# listing gives in UTC. The higher price is taken, because the hour a run reaches
+# DeepSeek is not fixed in advance. The price page of DeepSeek showed the same two
+# prices on 2026-09-29, as off-peak and peak.
+PRICES["deepseek_v4_pro"] = {"input": 1.32, "output": 3.96, "read_on": "2026-10-03"}
+
+# Kimi K3, endpoint moonshotai/mxfp4, the one endpoint Moonshot AI runs.
+PRICES["kimi_k3"] = {"input": 3.00, "output": 15.00, "read_on": "2026-10-03"}
+
+# GLM-5.2, endpoint z-ai/fp8, the one endpoint Z.ai runs.
+PRICES["glm_5_2"] = {"input": 1.40, "output": 4.40, "read_on": "2026-10-03"}
+
+
+def price(model_key: str, route: str | None = None) -> dict:
+    """The price of a model on a route, by default the route the model runs on."""
+    route = route or MODELS[model_key].route
+    table = BATCH_PRICES if route == "batch" else PRICES
+    return table.get(model_key, {})
+
 
 # --- Design ----------------------------------------------------------------
 
 CONDITIONS = ("training", "record")
 INSTRUMENTS = ("holistic", "itemised")
+# Stage B and Stage C run the holistic wording alone. Jason Hung fixed section 4.4
+# of PLAN.md on 2026-10-03, because the two wordings together nearly doubled the
+# cost of the study. The itemised wording stays in the harness, so the Stage A
+# ledgers can be reproduced and a pilot run can still call both wordings.
+CONFIRMATORY_INSTRUMENTS = ("holistic",)
 REPLICATES = 5
 TEMPERATURES = (0.0, 1.0)          # pilot runs both, the frozen plan names one
 

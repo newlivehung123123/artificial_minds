@@ -168,10 +168,34 @@ open-weight models built in China.
 | `kimi_k3` | Kimi K3 | Moonshot AI | open |
 | `glm_5_2` | GLM-5.2 | Z.ai | open |
 
-The exact API identifier of every model is confirmed against the model listing of the
-provider before the pilot, by `python -m scoring.run models`, and the confirmed identifier and
-the version string returned by every call are recorded with every score. No identifier in
-`scoring/config.py` is treated as correct until the listing confirms the identifier.
+The exact API identifier of every model is confirmed on the public model listing of OpenRouter
+by `python -m scoring.run models`, which needs no key and spends nothing. The confirmed
+identifier, the version string returned by every call and, wherever OpenRouter reports the
+company that served a call, the name of the company are recorded with every score. All six
+identifiers were confirmed on 2026-10-03, including `google/gemini-3.1-pro-preview`, the
+identifier under which Google serves Gemini 3.1 Pro. No identifier in `scoring/config.py` is
+treated as correct until the listing confirms the identifier.
+
+**The six models are called through OpenRouter from 2026-10-03.** OpenRouter is a company that
+resells the API of each model developer under one account and one key, and Jason Hung approved
+the route on 2026-10-03 in place of six funded accounts at the six developers. Every call is
+pinned to the endpoint the developer of the model runs, so no other company answers a call. A
+company other than the developer may serve the same weights at a lower numerical precision, and
+replicate variation measured across changing servers would include the change of server. On the
+sync route fallbacks are switched off and every sent parameter is required, so OpenRouter refuses
+a call the pinned endpoint cannot serve as sent, and the harness records the refusal as a
+transport error. On the batch route OpenRouter accepts the pin alone, so
+`python -m scoring.run models` checks on the batch listing that the pinned endpoint takes every
+parameter the harness sends.
+
+Claude Opus 5, GPT-5.6 Sol and Gemini 3.1 Pro run on the batch route of OpenRouter at half the
+sync price, and a batch is answered within a window of 24 hours or expires. The three open-weight
+models run on the sync route, because DeepSeek and Z.ai serve no batch endpoint and Kimi K3 is
+served in batch only by DeepInfra, a company other than the developer. The endpoints of Claude
+Opus 5, GPT-5.6 Sol and Kimi K3 list no temperature parameter, so the harness sends no
+temperature to the three models, every ledger row records in `temperature_applied` whether the
+temperature of the cell was applied, and section 4.5 states the open question about the
+omission.
 
 ### 4.2 Conditions — FIXED
 
@@ -188,7 +212,7 @@ scores. The extension collects the `record` condition, giving a further 3,660 sc
 
 Five per country, per model, per condition, per instrument.
 
-### 4.4 Instrument — OPEN
+### 4.4 Instrument — FIXED 2026-10-03
 
 Two candidate wordings are piloted on the same five countries, and one is frozen as primary.
 
@@ -209,8 +233,8 @@ Reason for piloting both. The Digital Minds Research Sprint study found 87.6 per
 variance separating one model from another in the combination of the model, the prompt format
 and the outcome, so a design carrying one prompt format cannot estimate how much the prompt
 format contributes, and a reliability figure from one prompt format is optimistic by an
-unknown amount. If the measured cost of the pilot allows, both instruments are carried into
-the full run and the instrument enters the reliability design as a facet.
+unknown amount. Both instruments were to go into the full run if the measured cost of the pilot
+allowed, and the closing paragraphs of section 4.4 record the decision on cost.
 
 Why Instrument B cannot ask for a block score. The block scores of the count are min-max
 scaled across the 122 eligible countries, so a block score is undefined for any respondent
@@ -218,8 +242,8 @@ who does not hold the 122-country reference set. Instrument B therefore asks for
 administrative facts, and the same scaling code converts model-supplied facts and
 record-supplied facts alike.
 
-**The holistic anchors were rewritten on 2026-09-29, and the choice between Instrument A and
-Instrument B stays OPEN.** Stage A ran the version v0 anchors and Claude Haiku 4.5 returned
+**The holistic anchors were rewritten on 2026-09-29, while the choice between Instrument A and
+Instrument B was still open.** Stage A ran the version v0 anchors and Claude Haiku 4.5 returned
 exactly nine distinct scores, namely 2, 5, 8, 12, 15, 18, 22, 25 and 28. Nine values rising in
 steps of three or four is a ladder, and a ladder loses rank information, because two countries
 differing slightly land on one rung. Barbados and Ghana both scored 5.0 under the training
@@ -243,8 +267,7 @@ and an instruction to spread the scores would measure compliance with the instru
 The ceiling Stage A produced, namely 28 for France against a human maximum of 49, is therefore
 reported as a finding and is not treated as a fault to be prompted away.
 
-**Version v2 is the holistic wording the full run uses, and what remains open in section 4.4 is
-the cost question alone.** Three passes of Stage A settled the wording. Version v0 produced a
+**Version v2 is the holistic wording the full run uses.** Three passes of Stage A settled the wording. Version v0 produced a
 ladder of nine values between 2 and 28. Version v1 broke the ladder but bought the resolution with
 a string, because the phrase "to one decimal place" asks for a format and drove the count of
 responses that followed the schema exactly down to 85 of 200. Version v2 asks for a JSON number in
@@ -266,27 +289,29 @@ measure transcription. Item-level accuracy for Instrument B is computed on the t
 and the itemised record condition is reported as evidence that the rendered record reaches the
 model.
 
-**The cost of carrying both wordings was measured on 2026-09-29 and comes to about 21 US
-dollars.** `PRICES` in `scoring/config.py` now carries a price for each of the seven models, read
-on 2026-09-29 from the published price page of each provider, and every page is named in the
-comment above the price. Running `python -m scoring.run budget runs/stage_a_v2.jsonl` prices the
-whole design from the token counts the third pass of Stage A measured. The holistic wording alone
-costs 1.61 dollars at Stage B and 19.65 dollars at Stage C, a total of 21.26 dollars. Carrying
-both wordings adds 1.57 dollars at Stage B and 19.20 dollars at Stage C, so the whole study costs
-42.03 dollars instead of 21.26 dollars and the addition is 20.77 dollars. Stage B doubles from 600
-calls to 1,200 and Stage C doubles from 7,320 calls to 14,640.
+**Jason Hung fixed the holistic wording alone for the full run on 2026-10-03, on cost.** Running
+both wordings would have doubled Stage B from 600 calls to 1,200 and Stage C from 7,320 calls to
+14,640, and at the prices read on 2026-09-29 for six direct accounts would have cost 42.03 US
+dollars across Stage B and Stage C against 21.26 dollars for the holistic wording alone. The
+itemised wording stays in the harness for the pilot model alone, so the Stage A ledgers can be
+reproduced, and the harness refuses the itemised wording for a confirmatory model.
 
-Carrying both wordings is what section 4.4 recommends on the measured cost. The Digital Minds
-Research Sprint found 87.6 per cent of the variance separating one model from another in the
-combination of the model, the prompt format and the outcome, so a design carrying one wording
-cannot estimate how much the wording contributes and reports a generalisability coefficient that
-is optimistic by an unknown amount. Paying 20.77 dollars to turn the wording from an unmeasured
-assumption into a measured facet is the whole reason section 4.4 piloted two wordings.
+The decision has a known cost, stated beside every generalisability coefficient the study
+reports. The Digital Minds Research Sprint found a share of 0.876 of the variance separating one
+model from another in the combination of the model, the prompt format and the outcome, so a
+design with one wording cannot estimate how much the wording contributes, and the coefficient the
+study reports is optimistic by an unknown amount.
 
-Section 4.4 stays labelled OPEN until Jason Hung confirms that the fellowship budget allows 42.03
-dollars, because no budget figure is recorded anywhere in this repository and the cost falls on
-his own API accounts. Confirming the budget is the only step left, and the measured numbers above
-are the whole of the evidence the confirmation needs.
+**Through OpenRouter, the holistic wording alone is projected at 1.06 US dollars for Stage B and
+12.98 dollars for Stage C.** `python -m scoring.run budget runs/stage_a_v2.jsonl` applies the token
+counts Claude Haiku 4.5 wrote under the holistic wording in the third pass of Stage A, 562 input
+and 84 output tokens per call, to the price `scoring/config.py` holds for each model on the route
+the model runs on. The worst case, at every call writing the full cap of 1,500 output tokens, is
+8.41 dollars for Stage B and 102.60 dollars for Stage C. A model that reasons before answering
+spends output tokens the response never shows, so Stage B measures the token counts of all six
+models, reasoning tokens included, before Stage C is funded. No figure includes the fee
+OpenRouter charges on buying credit, and the OpenRouter figures replace the direct figures of
+2026-09-29.
 
 ### 4.5 Temperature and replicate count — FIXED 2026-09-29
 
@@ -335,6 +360,18 @@ parse failure at temperature one is recorded as a measured property of the instr
 model rather than treated as a fault of the run. Section 5 states how a failure is recorded and
 `scoring/parse.py` counts every outcome, so a reliability figure is never computed on the
 responses that happened to parse.
+
+**Whether the three models that take no temperature run the cells at temperature zero is OPEN,
+from 2026-10-03.** The endpoints of Claude Opus 5, GPT-5.6 Sol and Kimi K3 list no temperature
+parameter, so for the three models a cell at temperature zero and the twin cell at temperature
+one reach the endpoint as the same request at the default temperature of the developer. Keeping
+the full grid turns the Stage B cells at temperature zero for the three models into five further
+replicates at the default temperature, recorded with `temperature_applied` set to false, and
+keeps the grid balanced. Skipping the cells halves the Stage B cost of the three models, which is
+0.73 dollars projected and 6.05 dollars at worst across the three. Stage C runs at temperature one
+alone, so the question concerns Stage B alone. The recommendation is to keep the full grid,
+because the further replicates measure replicate variation at the setting the three models
+actually run.
 
 ### 4.6 Contamination safeguards — FIXED
 
@@ -410,8 +447,9 @@ as a substantive outcome for the purposes of RQ1.
 Never written before, because the completed audit never called a model. Each item below is
 written out in full before the full run starts.
 
-1. The reliability design for RQ1. The facets are country, model, replicate, condition and,
-   if both instruments are carried, instrument. The variance components to be estimated, the
+1. The reliability design for RQ1. The facets are country, model, replicate and condition. The
+   instrument does not vary in the design, because section 4.4 fixes the holistic wording alone
+   and states the limitation that follows. The variance components to be estimated, the
    generalisability coefficient to be reported, and the decision study to be run, all follow
    the design already coded for the Digital Minds Research Sprint study, and the design is
    restated here in full rather than referenced.
@@ -482,6 +520,15 @@ of a wording as well as the cheaper test.
 Refusal rate, token count and replicate variation do not transfer between models, so Stage B
 cannot be replaced by Stage A at any price. Stage B is also where a model that emits reasoning
 tokens reveals the true output cost of the design, before Stage C commits 7,320 calls.
+
+Stage B and Stage C run the holistic wording alone through OpenRouter, on the routes section 4.1
+names, and section 8 of `RESUME.md` holds the commands. **Whether the cap of 1,500 output tokens
+suits a model that reasons before answering is OPEN, from 2026-10-03.** Reasoning tokens count
+against the cap, so a model that reasons at length can spend the cap before the answer is
+complete, and the response then ends with the stop reason `length`. `python -m scoring.run
+report` prints the stop reasons of every model, and the Stage B figures decide, before Stage C
+runs, whether to lift the cap or to limit reasoning through the `reasoning` parameter of
+OpenRouter.
 
 The harness refuses to write pilot scores and confirmatory scores into one ledger, so no
 filtering step stands between a raw ledger and an analysis.
@@ -781,3 +828,6 @@ with the existing deposit without a schema change.
 | 2026-09-29 | Correction to a figure section 4.5 carried. Section 4.5 had recorded the scored value as exactly deterministic at temperature zero, measured on the first pass of Stage A, and instrument version v2 returned one identical score in seven of the 10 holistic cells at temperature zero rather than in all 10. The decision of temperature one with five replicates stands, because temperature one returns a mean within-cell standard deviation of 3.29 points against 0.60 at temperature zero and because a replicate variance component measured at temperature zero would now rest on three holistic cells out of 10. Section 4.5 states the amended figures and names the pass each figure comes from. |
 | 2026-09-29 | Section 4.4 narrowed, and the wording question inside section 4.4 is settled while the label stays OPEN for the cost question alone. Instrument version v2 is the holistic wording the full run uses. The record condition of Instrument B is recorded as a manipulation check rather than a measurement, because the itemised wording returned the value the rendered record carries in all 130 answers where the record carries a value for a pilot country and returned null in all 70 answers where the record leaves the field absent, including 20 answers where the same wording under training data alone supplied a value from the model's own knowledge. Item-level accuracy for Instrument B is therefore computed on the training condition. Whether both instruments enter the full run as a facet of the reliability design waits on `PRICES`. |
 | 2026-09-29 | `PRICES` filled for all seven models, read on 2026-09-29 from the published price page of each provider, with every page named in the comment above the price. Three providers publish more than one price for the same model, so the rule applied is to take the price this study would actually pay and, where two prices could both apply, to take the higher one, because a spend cap built on the lower price would fail to cap. The whole design is now priced from the token counts the third pass of Stage A measured. The holistic wording alone costs 21.26 dollars and carrying both wordings costs 42.03 dollars. Section 4.4 recommends carrying both wordings and stays OPEN only until Jason Hung confirms the budget. Filling `PRICES` also lets `--spend-cap` bind on Stage B, which refused to start while any price was unknown. |
+| 2026-10-03 | Operational, approved by Jason Hung. The six confirmatory models are called through OpenRouter, one account and one key in place of six funded accounts. Every call is pinned to the endpoint the developer runs, with no fallback to another company. Claude Opus 5, GPT-5.6 Sol and Gemini 3.1 Pro run on the batch route of OpenRouter at half the sync price, and the three open-weight models on the sync route. Section 4.1 gained the route and the pins, and `scoring/config.py` gained `BATCH_PRICES`, with all six prices reread from the endpoint listing of OpenRouter under the rule of taking the higher price. `scoring.run models` now checks the public listing with no key, and all six identifiers were confirmed, including `google/gemini-3.1-pro-preview`. |
+| 2026-10-03 | Section 4.4 set to FIXED. Jason Hung fixed the holistic wording alone for Stage B and Stage C on cost, and the harness refuses the itemised wording for a confirmatory model. The study cannot estimate how much the wording contributes, and every generalisability coefficient is reported with the limitation stated beside the coefficient. Section 6.2 item one no longer names the instrument. Through OpenRouter, Stage B is projected at 1.06 dollars and Stage C at 12.98 dollars, with worst cases of 8.41 and 102.60 dollars. |
+| 2026-10-03 | Two questions that follow from the OpenRouter route added as OPEN. Section 4.5 asks whether the temperature-zero cells of Claude Opus 5, GPT-5.6 Sol and Kimi K3, whose endpoints take no temperature, run as further replicates at the default temperature or are skipped. Section 7.3 asks whether the cap of 1,500 output tokens suits a model that reasons before answering. |

@@ -9,6 +9,12 @@ __pycache__/
 # ledger by `scoring.run reparse`, which calls no provider, so a parse table is
 # regenerated rather than stored.
 runs/stub_test.jsonl
+runs/stub_stage_b.jsonl
 runs/*.tmp
 runs/stage_a_stub.jsonl
 runs/*.parsed_v*.jsonl
+
+# A batch manifest beside a ledger of real calls is tracked with the ledger,
+# because the manifest is the only record of what was submitted and what
+# OpenRouter charged for each batch. A manifest beside a stub ledger is not tracked.
+runs/*stub*.batches.jsonl

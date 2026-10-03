@@ -1,5 +1,8 @@
-# Five of the six providers speak the OpenAI chat-completions protocol, so two
-# SDKs cover all six.
+# OpenRouter serves the six confirmatory models through the OpenAI
+# chat-completions protocol, and Anthropic serves the pilot model directly, so two
+# SDKs cover every model. httpx sends the batch requests to OpenRouter and reads
+# the public endpoint listing that `python -m scoring.run models` checks.
 anthropic>=0.85
 openai>=1.109
+httpx>=0.28
 pandas>=2.2
