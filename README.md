@@ -91,10 +91,10 @@ python -m scoring.run reparse runs/stage_a_v2.jsonl
 python -m scoring.run budget runs/stage_a_v2.jsonl
 
 # 10. Stage B, the six confirmatory models under the holistic wording of
-#     instrument version v2. The three open-weight models, DeepSeek V4 Pro, Kimi K3
-#     and GLM-5.2, run on the sync route. Claude Opus 5, GPT-5.6 Sol and Gemini 3.1
-#     Pro run on the batch route at half the price. First, one call per model, on
-#     cells the full run would call anyway, so the full run skips the answered cells.
+#     instrument version v2. Gemini 3.1 Pro and the three open-weight models,
+#     DeepSeek V4 Pro, Kimi K3 and GLM-5.2, run on the sync route. Claude Opus 5 and
+#     GPT-5.6 Sol run on the batch route at half the price. First, one call per model,
+#     on cells the full run would call anyway, so the full run skips the answered cells.
 python -m scoring.run run --countries FRA --conditions training --temperatures 1 \
     --replicates 1 --out runs/stage_b.jsonl
 python -m scoring.run batch-submit --countries FRA --conditions training \
@@ -119,7 +119,8 @@ price.
 
 Step six prints CONFIRMED or PROBLEM for every confirmatory model on every route the model
 runs on. CONFIRMED means that, on the listing that day, the endpoint named by the pin in
-`scoring/config.py` serves the model, takes `max_tokens`, takes a temperature exactly where
+`scoring/config.py` serves the model, takes `max_tokens`, writes at least as many output tokens
+as the cap of the model in `scoring/config.py`, takes a temperature exactly where
 `scoring/config.py` says so, and lists the price that the rule in `scoring/config.py` takes.
 PROBLEM names what differs and ends the check with exit status 1. The repair is made by hand in
 `scoring/config.py`, with the address of the listing and the date read in the comment, as
@@ -149,13 +150,16 @@ outside the two blocks of hours. No price includes the fee OpenRouter charges on
 never taken over from an earlier model of the same family, and step six rereads every
 confirmatory price from the listing, so a changed price shows as a PROBLEM before any paid run.
 
-The batch route sends the cells of Claude Opus 5, GPT-5.6 Sol and Gemini 3.1 Pro to OpenRouter as
-batches, one model to a batch, and OpenRouter answers a batch within 24 hours. `batch-submit`
+The batch route sends the cells of Claude Opus 5 and GPT-5.6 Sol to OpenRouter as batches, one
+model to a batch, under a completion window of 24 hours, and a batch can stay open past the
+window, as the two Stage B batches of Gemini 3.1 Pro did before Gemini 3.1 Pro moved to the sync
+route on 2026-10-04. `batch-submit`
 writes nothing to the ledger and records every batch OpenRouter accepts in a manifest beside the
 ledger, `runs/stage_b.batches.jsonl` for `runs/stage_b.jsonl`. Git tracks the manifest with the
 ledger, because the manifest is the only record of what was submitted and of the charge OpenRouter
 reports for each batch, and OpenRouter reports no charge for a single request inside a batch.
-`batch-collect` writes the results of every finished batch into the ledger and is safe to repeat.
+`batch-collect` writes the results of every finished batch into the ledger, except a result for a
+cell the ledger already holds an answer for, and is safe to repeat.
 A batch that failed, expired or was cancelled closes with nothing written, so the cells of the
 batch return to the next `batch-submit`. A request that failed inside a finished batch is written
 as a transport error and is sent again only by `batch-submit --retry-failed`. OpenRouter deletes

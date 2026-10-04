@@ -64,7 +64,13 @@ def _client(provider: C.Provider):
         client = anthropic.Anthropic(api_key=_key(provider))
     else:
         import openai
-        client = openai.OpenAI(api_key=_key(provider), base_url=provider.base_url)
+        # The SDK sends a call again after a timeout or a dropped connection unless
+        # told otherwise, and OpenRouter bills a call that is not streamed in full
+        # even when the answer never arrives, so one cell could be paid for twice
+        # and the ledger would show one attempt. With no retries, every attempt is
+        # one ledger row, and a failed call is sent again only by --retry-failed.
+        client = openai.OpenAI(api_key=_key(provider), base_url=provider.base_url,
+                               max_retries=0)
     _CLIENTS[provider.key] = client
     return client
 
@@ -73,17 +79,19 @@ def _client(provider: C.Provider):
 
 
 def openrouter_body(model: C.Model, system: str, user: str, temperature: float,
-                    max_tokens: int = C.MAX_OUTPUT_TOKENS) -> dict:
+                    max_tokens: int | None = None) -> dict:
     """The chat-completions body of one call, identical on the sync and batch routes.
 
     A temperature is sent only to an endpoint that lists the parameter. OpenRouter
     drops a parameter an endpoint does not take without saying so, and a ledger
-    row that claimed a temperature the endpoint never applied would be false.
+    row that claimed a temperature the endpoint never applied would be false. The
+    cap of output tokens is the cap of the model in scoring/config.py unless a
+    caller names another.
     """
     body = {
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
-        "max_tokens": max_tokens,
+        "max_tokens": C.output_cap(model.key) if max_tokens is None else max_tokens,
     }
     if model.takes_temperature:
         body["temperature"] = temperature
@@ -95,8 +103,8 @@ def completion_record(body: dict) -> dict:
 
     A field missing from the response is recorded as None and never filled in.
     The output token count includes any reasoning tokens, which are also counted
-    on their own, because a reasoning model spends part of the cap of
-    MAX_OUTPUT_TOKENS on reasoning the response never shows.
+    on their own, because a reasoning model spends part of the cap of output
+    tokens on reasoning the response never shows.
     """
     choice = (body.get("choices") or [{}])[0]
     message = choice.get("message") or {}
@@ -120,10 +128,12 @@ def completion_record(body: dict) -> dict:
 
 
 def call(model_key: str, system: str, user: str, temperature: float,
-         *, instrument: str, stub: bool = False,
-         max_tokens: int = C.MAX_OUTPUT_TOKENS, timeout: float = 120.0) -> dict:
+         *, instrument: str, stub: bool = False, max_tokens: int | None = None,
+         timeout: float = C.CALL_TIMEOUT_SECONDS) -> dict:
     """One completion on the sync route. Returns text, usage and the model version."""
     model = C.MODELS[model_key]
+    if max_tokens is None:
+        max_tokens = C.output_cap(model_key)
     if stub:
         return _stub(model, system, user, temperature, instrument)
 

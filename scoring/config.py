@@ -122,11 +122,21 @@ class Model:
 # is down, the call is refused and is never sent to another company.
 #
 # A route of "batch" sends the calls of a model through the Batch API of
-# OpenRouter at half the price, with results returned within 24 hours. Three
-# developers serve a batch endpoint on their own servers, namely Anthropic,
-# OpenAI and Google. Kimi K3 is served in batch only by DeepInfra, a company
-# other than the developer, so Kimi K3 stays on the sync route at the endpoint
-# Moonshot AI runs. DeepSeek and Z.ai serve no batch endpoint.
+# OpenRouter at half the price, under a completion window of 24 hours, the only
+# window OpenRouter accepts. Three developers serve a batch endpoint on their own
+# servers, namely Anthropic, OpenAI and Google. Kimi K3 is served in batch only by
+# DeepInfra, a company other than the developer, so Kimi K3 stays on the sync
+# route at the endpoint Moonshot AI runs. DeepSeek and Z.ai serve no batch
+# endpoint.
+#
+# Jason Hung moved Gemini 3.1 Pro from the batch route to the sync route on
+# 2026-10-04, at the same pin. The two Stage B batches of Gemini 3.1 Pro,
+# submitted at 12:06 UTC on 2026-10-03, still read in_progress with no request
+# answered at 13:15 UTC on 2026-10-04, past the window of 24 hours, while the
+# batches of Claude Opus 5 and GPT-5.6 Sol submitted in the same minute were
+# answered within 12 minutes. The Batch API of OpenRouter has no call that
+# cancels a batch, so the two batches stay open in runs/stage_b.batches.jsonl,
+# and `batch-collect` writes no late result over a cell the sync route answered.
 #
 # takes_temperature is False where the pinned endpoint lists no temperature
 # parameter. OpenRouter drops a parameter an endpoint does not take without
@@ -164,8 +174,7 @@ MODELS = {
     # ends in the suffix. The proposal calls the model Gemini 3.1 Pro.
     "gemini_3_1_pro": Model("gemini_3_1_pro", "Gemini 3.1 Pro", "openrouter",
                             "google/gemini-3.1-pro-preview", "Google DeepMind",
-                            "closed", "United States", pin="google-vertex/global",
-                            route="batch"),
+                            "closed", "United States", pin="google-vertex/global"),
     # The dated identifier names the general release of DeepSeek V4 Pro, and the
     # endpoint DeepSeek runs serves the dated identifier alone.
     "deepseek_v4_pro": Model("deepseek_v4_pro", "DeepSeek V4 Pro", "openrouter",
@@ -293,7 +302,51 @@ CONFIRMATORY_INSTRUMENTS = ("holistic",)
 REPLICATES = 5
 TEMPERATURES = (0.0, 1.0)          # pilot runs both, the frozen plan names one
 
+# The cap of output tokens on one call. Reasoning tokens count against the cap, so
+# a model that reasons at length can spend the cap before the answer is written,
+# and the response then ends with the stop reason "length" and holds no score.
 MAX_OUTPUT_TOKENS = 1500
+
+# Every call sent before 2026-10-03, in Stage A and Stage B alike, was sent at
+# 1,500 output tokens, the value MAX_OUTPUT_TOKENS has held since the first commit.
+# A ledger row or a manifest batch written before the cap was recorded holds no
+# max_tokens field, and the harness reads the row or the batch as sent at 1,500.
+CAP_BEFORE_RECORDING = 1500
+
+# Section 7.3 of PLAN.md, decided by Jason Hung on 2026-10-03 from the Stage B
+# ledger runs/stage_b.jsonl. At 1,500, the cap cut 45 of 100 DeepSeek V4 Pro
+# answers and 15 of 100 Kimi K3 answers, and cut the two conditions unequally, 27
+# record and 18 training for DeepSeek V4 Pro, five record and 10 training for Kimi
+# K3, so the cap biased the comparison of the two conditions. The three models on
+# the sync route are sent at 8,000, and the endpoint each pin names writes at least
+# 131,072. A sync call is charged for the tokens the model writes, so the higher
+# cap costs nothing for an answer 1,500 would not have cut, and GLM-5.2 is lifted
+# with the other two sync models because the longest GLM-5.2 answer came within
+# 259 tokens of 1,500. Claude Opus 5 and GPT-5.6 Sol stay at 1,500, because
+# OpenRouter holds the worst case of every batch request against the balance, so a
+# higher cap on the batch route ties up more of the balance while a batch waits,
+# and the longest Stage B answer of Claude Opus 5 or GPT-5.6 Sol ran to 677
+# tokens. Gemini 3.1 Pro joined the sync route on 2026-10-04 and was lifted to
+# 8,000 by Jason Hung the same day, from the 100 Stage B answers of Gemini 3.1 Pro
+# in runs/stage_b.jsonl. At 1,500 the cap cut seven of the 100 answers, five
+# training and two record, and every cut answer had finished reasoning. The
+# endpoint the pin of Gemini 3.1 Pro names writes at most 65,536.
+OUTPUT_CAPS = {"deepseek_v4_pro": 8000, "kimi_k3": 8000, "glm_5_2": 8000,
+               "gemini_3_1_pro": 8000}
+
+
+def output_cap(model_key: str) -> int:
+    """The cap of output tokens a call of the model is sent with."""
+    return OUTPUT_CAPS.get(model_key, MAX_OUTPUT_TOKENS)
+
+
+# The longest a sync call may take before the harness gives up on the call. A
+# call through OpenRouter that is not streamed is billed in full even when the
+# harness stops waiting, so the limit sits well past the longest answer the cap
+# allows. Kimi K3, the slowest model in Stage B, took about 2.4 seconds plus 32.4
+# seconds for every 1,000 output tokens, read from runs/stage_b.jsonl, so a full
+# answer of 8,000 tokens takes about 260 seconds.
+CALL_TIMEOUT_SECONDS = 600.0
 
 # --- Size of each stage ----------------------------------------------------
 # Every factor is written out, so the arithmetic behind a call count in any report

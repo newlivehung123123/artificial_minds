@@ -188,10 +188,14 @@ transport error. On the batch route OpenRouter accepts the pin alone, so
 `python -m scoring.run models` checks on the batch listing that the pinned endpoint takes every
 parameter the harness sends.
 
-Claude Opus 5, GPT-5.6 Sol and Gemini 3.1 Pro run on the batch route of OpenRouter at half the
-sync price, and a batch is answered within a window of 24 hours or expires. The three open-weight
-models run on the sync route, because DeepSeek and Z.ai serve no batch endpoint and Kimi K3 is
-served in batch only by DeepInfra, a company other than the developer. The endpoints of Claude
+Claude Opus 5 and GPT-5.6 Sol run on the batch route of OpenRouter at half the sync price, under
+a completion window of 24 hours, the only window OpenRouter accepts. Gemini 3.1 Pro and the three
+open-weight models run on the sync route. DeepSeek and Z.ai serve no batch endpoint, and Kimi K3
+is served in batch only by DeepInfra, a company other than the developer. Gemini 3.1 Pro ran on
+the batch route until 2026-10-04, when Jason Hung moved Gemini 3.1 Pro to the sync route at the
+same pin. The two Stage B batches of Gemini 3.1 Pro answered no request in more than 25 hours,
+while the batches of Claude Opus 5 and GPT-5.6 Sol submitted in the same minute closed within 12
+minutes, and the Batch API of OpenRouter has no call that cancels a batch. The endpoints of Claude
 Opus 5, GPT-5.6 Sol and Kimi K3 list no temperature parameter, so the harness sends no
 temperature to the three models, every ledger row records in `temperature_applied` whether the
 temperature of the cell was applied, and section 4.5 states the open question about the
@@ -311,7 +315,8 @@ the model runs on. The worst case, at every call writing the full cap of 1,500 o
 spends output tokens the response never shows, so Stage B measures the token counts of all six
 models, reasoning tokens included, before Stage C is funded. No figure includes the fee
 OpenRouter charges on buying credit, and the OpenRouter figures replace the direct figures of
-2026-09-29.
+2026-09-29. Stage B then showed the cap of 1,500 cutting answers of DeepSeek V4 Pro and Kimi K3,
+and section 7.3 holds the caps now in force.
 
 ### 4.5 Temperature and replicate count — FIXED 2026-09-29
 
@@ -522,13 +527,76 @@ cannot be replaced by Stage A at any price. Stage B is also where a model that e
 tokens reveals the true output cost of the design, before Stage C commits 7,320 calls.
 
 Stage B and Stage C run the holistic wording alone through OpenRouter, on the routes section 4.1
-names, and section 8 of `RESUME.md` holds the commands. **Whether the cap of 1,500 output tokens
-suits a model that reasons before answering is OPEN, from 2026-10-03.** Reasoning tokens count
-against the cap, so a model that reasons at length can spend the cap before the answer is
-complete, and the response then ends with the stop reason `length`. `python -m scoring.run
-report` prints the stop reasons of every model, and the Stage B figures decide, before Stage C
-runs, whether to lift the cap or to limit reasoning through the `reasoning` parameter of
-OpenRouter.
+names, and section 8 of `RESUME.md` holds the commands. **The cap of output tokens is FIXED for
+five of the six models from 2026-10-03 and for Gemini 3.1 Pro from 2026-10-04, decided by Jason
+Hung from the Stage B ledger `runs/stage_b.jsonl`.** Reasoning tokens count against the cap, so a
+model that reasons at length can spend the cap before the answer is complete, and the response
+then ends with the stop reason `length` and holds no score.
+
+Every call of Stage A and Stage B was sent at a cap of 1,500 output tokens. In Stage B the cap cut
+45 of the 100 answers of DeepSeek V4 Pro and 15 of the 100 answers of Kimi K3. The cap also cut
+the two conditions unequally, 27 answers under the record condition and 18 under the training
+condition for DeepSeek V4 Pro, and five under the record condition and 10 under the training
+condition for Kimi K3. A cap of 1,500 therefore leaves more record cells than training cells
+without a score for DeepSeek V4 Pro, and more training cells than record cells for Kimi K3, and
+biases the comparison of the two conditions in opposite directions for the two models. The cap
+cut seven of the 100 answers of Gemini 3.1 Pro, five under the training condition and two under
+the record condition, and all seven cut answers of Gemini 3.1 Pro had finished reasoning and were
+cut partway through the JSON answer. The cap cut no answer of the other three models. GLM-5.2
+wrote at most 1,241 output tokens, reasoning included, Claude Opus 5 at most 365 and GPT-5.6 Sol
+at most 677.
+
+DeepSeek V4 Pro, Kimi K3, GLM-5.2 and Gemini 3.1 Pro, the four models on the sync route, are sent
+at a cap of 8,000 output tokens. The endpoint the pin of each open-weight model names writes at
+least 131,072 output tokens, and the endpoint the pin of Gemini 3.1 Pro names writes at most
+65,536. A call on the sync route is charged for the tokens the model writes, so the higher cap
+costs nothing for an answer the cap of 1,500 would not have cut, and GLM-5.2 is lifted with the
+other sync models because the longest answer of GLM-5.2 came within 259 tokens of 1,500. Gemini
+3.1 Pro was lifted on 2026-10-04, after the move to the sync route, because the cap of 1,500 cut
+seven answers unequally across the two conditions. Claude Opus 5 and GPT-5.6 Sol stay
+at 1,500. OpenRouter holds the worst case of every batch request against the balance until the
+batch closes, so a higher cap on the batch route ties up more of the balance, and the longest
+Stage B answer of Claude Opus 5 or GPT-5.6 Sol is under half the cap. Reasoning is not limited
+through the `reasoning` parameter of OpenRouter, so every model reasons as the pinned endpoint
+runs the model by default.
+
+The 100 Stage B cells of DeepSeek V4 Pro, of Kimi K3 and of Gemini 3.1 Pro are called again at
+the cap of 8,000 into a separate ledger, `runs/stage_b_cap8000.jsonl`, before Stage C runs, to
+measure how often a cap of 8,000 still cuts an answer and what an answer costs when the cap cuts
+nothing. The check writes nothing to `runs/stage_b.jsonl`, so the Stage B ledger keeps the record
+of the cap of 1,500.
+
+Jason Hung ran the check of DeepSeek V4 Pro and Kimi K3 on 2026-10-03, and the cap of 8,000 cut no
+answer. All 200 calls ended with
+the stop reason `stop` and returned a score, including the 45 cells of DeepSeek V4 Pro and the 15
+cells of Kimi K3 that the cap of 1,500 cut in Stage B. DeepSeek V4 Pro wrote 1,943 output tokens per
+call on average and at most 7,082, and 60 of the 100 answers ran past 1,500 tokens, 36 under the
+record condition and 24 under the training condition. Kimi K3 wrote 1,016 output tokens per call on
+average and at most 4,888, and 16 of the 100 answers ran past 1,500 tokens, six under the record
+condition and 10 under the training condition. A cap of 1,500 would therefore have cut the two
+conditions unequally again, in the same directions as in Stage B. Nine calls of Kimi K3 took longer
+than 100 seconds, the longest call took 165 seconds, and all nine calls returned an answer without
+streaming. OpenRouter charged 1.97 dollars for the 200 calls, against 2.55 dollars at listed prices.
+
+Jason Hung ran the check of Gemini 3.1 Pro on 2026-10-04, after the move to the sync route, and
+the cap of 8,000 cut no answer. Of the 100 calls, 98 ended with the stop reason `stop` and
+returned a score, including all seven cells the cap of 1,500 cut in Stage B. The two other calls,
+a call for Ghana under the training condition and a call for France under the record condition,
+ended with the stop reason `error`, wrote no token and were not charged, and the two cells,
+called again with `--retry-failed`, returned a score with the stop reason `stop`. Over the 100
+answered cells, Gemini 3.1 Pro wrote 1,059.1 output tokens per call on average and at most 1,815,
+and five of the 100 answers ran past 1,500 tokens, one under the record condition and four under
+the training condition. A cap of 1,500 would therefore have cut more training cells than record
+cells again, as in Stage B. On the 93 cells answered in both runs, the median answer ran to 1,039
+output tokens at the cap of 1,500 and 1,044 at the cap of 8,000. OpenRouter charged 1.38 dollars
+for the check, the retry included, the same as at listed prices.
+
+From the change of 2026-10-03, every ledger row records the cap the call was sent with in the
+field `max_tokens`, and every batch in a manifest records the cap of the batch, so a row is read
+against the cap of that row. A row or a batch written before the change holds no `max_tokens`
+field, was sent at 1,500, and is read as sent at 1,500. `python -m scoring.run report` prints the
+stop reasons and the cap of every model, and `python -m scoring.run models` reports PROBLEM for a
+pin whose endpoint writes fewer output tokens than the cap.
 
 The harness refuses to write pilot scores and confirmatory scores into one ledger, so no
 filtering step stands between a raw ledger and an analysis.
@@ -831,3 +899,7 @@ with the existing deposit without a schema change.
 | 2026-10-03 | Operational, approved by Jason Hung. The six confirmatory models are called through OpenRouter, one account and one key in place of six funded accounts. Every call is pinned to the endpoint the developer runs, with no fallback to another company. Claude Opus 5, GPT-5.6 Sol and Gemini 3.1 Pro run on the batch route of OpenRouter at half the sync price, and the three open-weight models on the sync route. Section 4.1 gained the route and the pins, and `scoring/config.py` gained `BATCH_PRICES`, with all six prices reread from the endpoint listing of OpenRouter under the rule of taking the higher price. `scoring.run models` now checks the public listing with no key, and all six identifiers were confirmed, including `google/gemini-3.1-pro-preview`. |
 | 2026-10-03 | Section 4.4 set to FIXED. Jason Hung fixed the holistic wording alone for Stage B and Stage C on cost, and the harness refuses the itemised wording for a confirmatory model. The study cannot estimate how much the wording contributes, and every generalisability coefficient is reported with the limitation stated beside the coefficient. Section 6.2 item one no longer names the instrument. Through OpenRouter, Stage B is projected at 1.06 dollars and Stage C at 12.98 dollars, with worst cases of 8.41 and 102.60 dollars. |
 | 2026-10-03 | Two questions that follow from the OpenRouter route added as OPEN. Section 4.5 asks whether the temperature-zero cells of Claude Opus 5, GPT-5.6 Sol and Kimi K3, whose endpoints take no temperature, run as further replicates at the default temperature or are skipped. Section 7.3 asks whether the cap of 1,500 output tokens suits a model that reasons before answering. |
+| 2026-10-03 | Section 7.3 set to FIXED for the cap of output tokens of five of the six models, decided by Jason Hung from the Stage B ledger `runs/stage_b.jsonl`, and the cap of Gemini 3.1 Pro stays OPEN until the Stage B batches of Gemini 3.1 Pro return. At the cap of 1,500, the cap cut 45 of the 100 Stage B answers of DeepSeek V4 Pro and 15 of the 100 of Kimi K3, unequally across the two conditions. DeepSeek V4 Pro, Kimi K3 and GLM-5.2 are sent at 8,000 output tokens, and Claude Opus 5 and GPT-5.6 Sol stay at 1,500, because OpenRouter holds the worst case of a batch against the balance while the batch waits. Every ledger row and every manifest batch now records the cap the call was sent with, `python -m scoring.run models` checks the cap against the most the endpoint writes, and the 200 Stage B cells of DeepSeek V4 Pro and Kimi K3 are called again at 8,000 into `runs/stage_b_cap8000.jsonl`. |
+| 2026-10-03 | Operational only, no design choice touched. A sync call now waits up to 600 seconds before the harness gives up, in place of 120 seconds, because a full answer of 8,000 tokens takes Kimi K3 about 260 seconds at the speed `runs/stage_b.jsonl` records. The OpenAI SDK, the software library that sends every OpenRouter call, no longer sends a call a second time after a timeout or a dropped connection. OpenRouter bills a call that is not streamed in full even when the answer never arrives, so one cell could have been paid for twice with one row in the ledger. A failed call is now sent again only by `--retry-failed`, and every attempt is one ledger row. |
+| 2026-10-04 | Operational, approved by Jason Hung. Gemini 3.1 Pro moved from the batch route to the sync route of OpenRouter at the same pin, `google-vertex/global`. The two Stage B batches of Gemini 3.1 Pro, submitted at 12:06 UTC on 2026-10-03, answered no request in more than 25 hours, while the four batches of Claude Opus 5 and GPT-5.6 Sol submitted in the same minute closed within 12 minutes, and the Batch API of OpenRouter has no call that cancels a batch. Section 4.1 names the new route. `batch-submit` refuses a model on the sync route, and `batch-collect` writes no batch result into a cell the ledger already holds an answer for, so a batch of Gemini 3.1 Pro that returns late changes no score. |
+| 2026-10-04 | Section 7.3 set to FIXED for the cap of output tokens of Gemini 3.1 Pro, decided by Jason Hung from the Stage B ledger `runs/stage_b.jsonl`, so the cap of every model is now FIXED. At the cap of 1,500, the cap cut seven of the 100 Stage B answers of Gemini 3.1 Pro, five under the training condition and two under the record condition. Gemini 3.1 Pro is sent at 8,000 output tokens with the other three models on the sync route, and the 100 Stage B cells of Gemini 3.1 Pro were called again at 8,000 into `runs/stage_b_cap8000.jsonl`. The check cut no answer. Two calls ended with the stop reason `error` and were not charged, and the two cells returned a score when called again, so all 100 cells of the check hold a score. |

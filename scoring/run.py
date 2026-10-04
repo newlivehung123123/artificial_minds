@@ -16,11 +16,13 @@ ledger is an append-only record of every attempt, which is what the deposit need
 
 A model on the sync route is called by `run`, one call at a time. A model on the
 batch route is sent by `batch-submit` and written to the ledger by
-`batch-collect`, because a batch is answered within 24 hours and not at once.
-Every batch submitted is recorded in a manifest beside the ledger, named
-<ledger>.batches.jsonl, which is append-only like the ledger, so a submitted
-batch is never lost before collection and a cell inside an open batch is never
-submitted twice. Both routes write the same row schema into the same ledger.
+`batch-collect`, because a batch is not answered at once. Every batch submitted
+is recorded in a manifest beside the ledger, named <ledger>.batches.jsonl, which
+is append-only like the ledger, so a submitted batch is never lost before
+collection and a cell inside an open batch is never submitted twice. Both routes
+write the same row schema into the same ledger. A model moved from the batch
+route to the sync route can leave a batch open, and `batch-collect` never writes
+a late batch result over a cell that already holds an answer from another call.
 """
 
 from __future__ import annotations
@@ -129,9 +131,14 @@ def _check_route(model: C.Model, route: str) -> tuple[str, list[str]]:
     endpoint = hits[0]
     problems = []
     params = set(endpoint.get("supported_parameters") or [])
+    cap = C.output_cap(model.key)
     if "max_tokens" not in params:
         problems.append(f"the endpoint lists no max_tokens, so the cap of "
-                        f"{C.MAX_OUTPUT_TOKENS} output tokens could be dropped")
+                        f"{cap:,} output tokens could be dropped")
+    ceiling = endpoint.get("max_completion_tokens")
+    if ceiling is not None and ceiling < cap:
+        problems.append(f"the endpoint writes at most {ceiling:,} output tokens, "
+                        f"below the cap of {cap:,} in scoring/config.py")
     if ("temperature" in params) != model.takes_temperature:
         problems.append(
             f"the endpoint {'lists' if 'temperature' in params else 'lists no'} "
@@ -156,7 +163,8 @@ def cmd_models(args) -> int:
 
     The listing is public, so the check needs no key and spends nothing. For each
     model the check confirms that the endpoint the pin names serves the model,
-    that the endpoint takes max_tokens, that the endpoint takes a temperature
+    that the endpoint takes max_tokens and writes as many output tokens as the cap
+    of the model in scoring/config.py, that the endpoint takes a temperature
     exactly where scoring/config.py says so, and that the price in
     scoring/config.py is the price the rule in scoring/config.py takes from the
     listing today. A model on the batch route is checked on the batch listing as
@@ -342,6 +350,12 @@ def _plan(args, route: str) -> tuple[Path, dict, list[str], list[tuple]]:
     return out, done, models, cells
 
 
+# The outcomes of a call that returned no answer, which --retry-failed sends again.
+# Every other outcome is an answer, a refusal or a response the parser could not
+# read included, and is never replaced.
+RETRYABLE = ("transport_error", "empty")
+
+
 def _pending(cells: list[tuple], done: dict, retry_failed: bool,
              in_flight: set[str] = frozenset()) -> list[tuple]:
     pending = []
@@ -352,7 +366,7 @@ def _pending(cells: list[tuple], done: dict, retry_failed: bool,
         prior = done.get(key)
         if prior is None:
             pending.append(cell)
-        elif retry_failed and prior.get("outcome") in ("transport_error", "empty"):
+        elif retry_failed and prior.get("outcome") in RETRYABLE:
             pending.append(cell)
     return pending
 
@@ -372,7 +386,7 @@ def _cell_meta(cell: tuple, prompt: dict) -> dict:
     }
 
 
-def _base_row(meta: dict, route: str) -> dict:
+def _base_row(meta: dict, route: str, max_tokens: int) -> dict:
     model = C.MODELS[meta["model"]]
     return {
         "cell": meta["cell"], "written_at": now(),
@@ -391,6 +405,10 @@ def _base_row(meta: dict, route: str) -> dict:
         "template_sha256_16": meta["template_sha256_16"],
         "prompt_sha256_16": meta["prompt_sha256_16"],
         "route": route, "pin": model.pin,
+        # The cap of output tokens the call was sent with. A cap that cuts an
+        # answer short leaves the cell without a score, so a row is read against
+        # the cap of that row and not against the cap in scoring/config.py today.
+        "max_tokens": max_tokens,
         # False where the endpoint takes no temperature, so the temperature of the
         # cell was never sent and the cell differs from its twin at the other
         # temperature only by chance.
@@ -423,6 +441,19 @@ def cmd_run(args) -> int:
 
     print(f"{len(cells)} cells, {len(cells) - len(pending)} already in {out.name}, "
           f"{len(pending)} to call")
+    # A model moved from the batch route can leave cells inside a batch that never
+    # closed. The cells are called here all the same, and `batch-collect` writes no
+    # late result over a cell answered here.
+    manifest = manifest_path(out)
+    held = {meta["cell"] for b in read_manifest(manifest).values()
+            if b["closed"] is None for meta in b["cells"].values()}
+    overlap = sum(1 for cell in pending if cell_id(*cell) in held)
+    if overlap:
+        print(f"{overlap} of the cells to call also sit in a batch still open in "
+              f"{manifest.name}. A late result of the batch is not written over a "
+              f"cell this run answers.")
+    print("cap of output tokens per call: " + ", ".join(
+        f"{C.MODELS[m].label} {C.output_cap(m):,}" for m in models))
     if args.max_calls and len(pending) > args.max_calls:
         print(f"--max-calls {args.max_calls} caps this run, "
               f"{len(pending) - args.max_calls} cells left for a later run")
@@ -439,10 +470,11 @@ def cmd_run(args) -> int:
         for n, cell in enumerate(pending, 1):
             instrument, condition, model_key, iso3, replicate, temperature, template = cell
             prompt = I.build(instrument, condition, iso3)
-            row = _base_row(_cell_meta(cell, prompt), "sync")
+            cap = C.output_cap(model_key)
+            row = _base_row(_cell_meta(cell, prompt), "sync", cap)
             try:
                 res = V.call(model_key, prompt["system"], prompt["user"], temperature,
-                             instrument=instrument, stub=args.stub)
+                             instrument=instrument, stub=args.stub, max_tokens=cap)
             except V.MissingKey as exc:
                 # Reachable only where a key is removed from the environment while a
                 # run is in flight. A key is not a property of a model, so the run
@@ -522,25 +554,25 @@ def cmd_batch_submit(args) -> int:
     for model_key, chunk in chunks:
         model = C.MODELS[model_key]
         price = C.price(model_key, "batch")
+        cap = C.output_cap(model_key)
         requests, metas, worst = [], {}, 0.0
         for cell in chunk:
             instrument, condition, _, iso3, _, temperature, _ = cell
             prompt = I.build(instrument, condition, iso3)
             cid = _custom_id(cell)
             requests.append({"custom_id": cid, "body": V.openrouter_body(
-                model, prompt["system"], prompt["user"], temperature)})
+                model, prompt["system"], prompt["user"], temperature, cap)})
             metas[cid] = _cell_meta(cell, prompt)
             if price.get("input") is not None and price.get("output") is not None:
                 chars = len(prompt["system"]) + len(prompt["user"])
-                worst += (chars / 3 * price["input"]
-                          + C.MAX_OUTPUT_TOKENS * price["output"]) / 1e6
-        planned.append((model_key, requests, metas, worst))
+                worst += (chars / 3 * price["input"] + cap * price["output"]) / 1e6
+        planned.append((model_key, cap, requests, metas, worst))
         worst_total += worst
         print(f"  {model.label:16} {len(requests):4} requests, worst case "
               f"${worst:.2f} at ${price.get('input')} and ${price.get('output')} "
-              f"per million, pinned to {model.pin}")
+              f"per million and a cap of {cap:,} output tokens, pinned to {model.pin}")
     print(f"worst case of this submission ${worst_total:.2f}, every request writing "
-          f"the full {C.MAX_OUTPUT_TOKENS} output tokens")
+          f"the full cap of output tokens")
     if args.spend_cap and worst_total > args.spend_cap:
         sys.exit(f"nothing was submitted, because the worst case ${worst_total:.2f} "
                  f"is above --spend-cap {args.spend_cap}. Lift the cap or submit "
@@ -549,7 +581,7 @@ def cmd_batch_submit(args) -> int:
         return 0
 
     with manifest.open("a") as fh:
-        for n, (model_key, requests, metas, worst) in enumerate(planned, 1):
+        for n, (model_key, cap, requests, metas, worst) in enumerate(planned, 1):
             if args.stub:
                 digest = hashlib.sha256("".join(metas).encode()).hexdigest()[:12]
                 batch = {"id": f"stub-batch-{digest}", "status": "validating"}
@@ -569,15 +601,15 @@ def cmd_batch_submit(args) -> int:
                 "event": "submitted", "at": now(), "batch_id": batch["id"],
                 "model": model_key, "pin": C.MODELS[model_key].pin,
                 "stub": args.stub, "status": batch.get("status"),
-                "requests": len(requests), "worst_case_usd": round(worst, 6),
-                "cells": metas,
+                "requests": len(requests), "max_tokens": cap,
+                "worst_case_usd": round(worst, 6), "cells": metas,
             }) + "\n")
             fh.flush()
             print(f"  submitted {batch['id']}  {C.MODELS[model_key].label}  "
                   f"{len(requests)} requests  {batch.get('status')}")
     print(f"\n{len(planned)} batch(es) recorded in {manifest}. Collect the results "
-          f"with `python -m scoring.run batch-collect --out {out}`. A batch is "
-          f"answered within 24 hours.")
+          f"with `python -m scoring.run batch-collect --out {out}`. OpenRouter sets "
+          f"a window of 24 hours, which a batch can overrun.")
     return 0
 
 
@@ -605,7 +637,11 @@ def cmd_batch_collect(args) -> int:
     Safe to run as often as wanted. A batch still running is reported and left
     open. A completed batch has one row written for every result whose cell holds
     no row from the same batch, so a collection broken off part-way is finished by
-    running the command again. A batch that failed, expired or was cancelled is
+    running the command again. A result is not written where the cell already
+    holds an answer from another call, because the last row of a cell is the row
+    the analysis reads, and a late batch would otherwise replace an answer the
+    sync route wrote while the batch stayed open. The count of results not written
+    is recorded in the manifest. A batch that failed, expired or was cancelled is
     closed with nothing written, so the cells of the batch return to the pending
     cells of the next `batch-submit`.
     """
@@ -624,6 +660,7 @@ def cmd_batch_collect(args) -> int:
 
     done = read_ledger(out)
     written = Counter()
+    skipped = 0
     with out.open("a") as ledger, manifest.open("a") as log:
         for batch in open_batches:
             label = C.MODELS[batch["model"]].label
@@ -646,7 +683,7 @@ def cmd_batch_collect(args) -> int:
             if status not in V.BATCH_TERMINAL:
                 continue
 
-            rows_written = 0
+            rows_written = rows_skipped = 0
             if status == "completed":
                 for result in state.get("results") or []:
                     meta = batch["cells"].get(result.get("custom_id"))
@@ -658,7 +695,13 @@ def cmd_batch_collect(args) -> int:
                     prior = done.get(meta["cell"])
                     if prior is not None and prior.get("batch_id") == batch["batch_id"]:
                         continue
-                    row = _base_row(meta, "batch") | {
+                    if prior is not None and prior.get("outcome") not in RETRYABLE:
+                        rows_skipped += 1
+                        continue
+                    # A batch submitted before the manifest recorded the cap was
+                    # sent at the cap every call had then.
+                    cap = batch.get("max_tokens", C.CAP_BEFORE_RECORDING)
+                    row = _base_row(meta, "batch", cap) | {
                         "batch_id": batch["batch_id"], "custom_id": result["custom_id"],
                     }
                     response = result.get("response") or {}
@@ -684,17 +727,27 @@ def cmd_batch_collect(args) -> int:
                 "usage": state.get("usage"), "error": state.get("error"),
                 "finalized_at": state.get("finalized_at"),
                 "rows_written": rows_written,
+                "rows_skipped_answered": rows_skipped,
             }) + "\n")
             log.flush()
+            skipped += rows_skipped
             if status != "completed":
-                print(f"    closed with nothing written, so its "
-                      f"{len(batch['cells'])} cells return to the next batch-submit. "
-                      f"{json.dumps(state.get('error'))[:300]}")
+                where = ("the next batch-submit" if C.MODELS[batch["model"]].route == "batch"
+                         else f"`run`, because {label} runs on the sync route now")
+                print(f"    closed with nothing written, so any of its "
+                      f"{len(batch['cells'])} cells still unanswered return to "
+                      f"{where}. {json.dumps(state.get('error'))[:300]}")
             else:
                 cost = (state.get("usage") or {}).get("cost")
                 print(f"    {rows_written} rows written"
+                      + (f", {rows_skipped} results not written because the cell "
+                         f"already held an answer from another call"
+                         if rows_skipped else "")
                       + (f", OpenRouter charged ${cost}" if cost is not None else ""))
     print(f"\n{sum(written.values())} rows written to {out}  {dict(written)}")
+    if skipped:
+        print(f"{skipped} batch results not written, because the cell already held "
+              f"an answer from another call. The count is in {manifest.name}.")
     still = sum(1 for b in read_manifest(manifest).values() if b["closed"] is None)
     if still:
         print(f"{still} batch(es) still open. Run this command again later.")
@@ -745,8 +798,14 @@ def cmd_report(args) -> int:
             reasoning = [r["reasoning_tokens"] for r in mine
                          if r.get("reasoning_tokens") is not None]
             unapplied = sum(1 for r in mine if r.get("temperature_applied") is False)
+            # A row written before the cap was recorded was sent at the cap every
+            # call had then.
+            caps = Counter(r.get("max_tokens", C.CAP_BEFORE_RECORDING) for r in mine)
+            cap_text = (f"cap {next(iter(caps)):,}" if len(caps) == 1 else
+                        "cap " + " and ".join(f"{c:,} in {n} rows"
+                                              for c, n in sorted(caps.items())))
             line = (f"{model:{width}}  {mine[0]['route']} route, pin {mine[0].get('pin')}, "
-                    f"served by {dict(served)}, stop reasons {dict(stops)}")
+                    f"{cap_text}, served by {dict(served)}, stop reasons {dict(stops)}")
             if reasoning:
                 line += (f", mean reasoning tokens "
                          f"{sum(reasoning) / len(reasoning):,.0f}")
@@ -899,9 +958,9 @@ def cmd_budget(args) -> int:
     instrument and condition cells are not all measured is reported as unmeasured
     rather than projected from the cells that are present. Each model is priced
     on the route the model runs on, and a worst case is printed beside every
-    projection, at every call writing the full cap of output tokens, because a
-    model that reasons before answering writes more output tokens than the model
-    a ledger measured may have written.
+    projection, at every call writing the full cap of output tokens of that
+    model, because a model that reasons before answering writes more output
+    tokens than the model a ledger measured may have written.
     """
     rows = list(read_ledger(Path(args.ledger)).values())
     real = [r for r in rows if not r.get("stub") and r.get("input_tokens")]
@@ -970,15 +1029,16 @@ def cmd_budget(args) -> int:
                 if price.get("input") is None or price.get("output") is None:
                     unpriced.append(C.MODELS[key].label)
                     continue
+                cap = C.output_cap(key)
                 cost = (per_model * mean_in / 1e6 * price["input"]
                         + per_model * mean_out / 1e6 * price["output"])
                 worst = (per_model * mean_in / 1e6 * price["input"]
-                         + per_model * C.MAX_OUTPUT_TOKENS / 1e6 * price["output"])
+                         + per_model * cap / 1e6 * price["output"])
                 total += cost
                 worst_total += worst
                 print(f"      {C.MODELS[key].label:20} ${cost:9,.2f}  ${worst:9,.2f}   "
                       f"{route} at ${price['input']}/${price['output']} per million, "
-                      f"read {price['read_on']}")
+                      f"read {price['read_on']}, cap {cap:,}")
             if total:
                 print(f"      {'priced subtotal':20} ${total:9,.2f}  ${worst_total:9,.2f}")
             if unpriced:
@@ -990,7 +1050,7 @@ def cmd_budget(args) -> int:
           f"{', '.join(measured_on)} to every model listed, so a projection for "
           f"another model holds only as far as that model writes as much as "
           f"{', '.join(measured_on)} wrote. The worst case is every call writing "
-          f"the full {C.MAX_OUTPUT_TOKENS} output tokens the harness allows, which "
+          f"the full cap of output tokens printed on the line of the model, which "
           f"bounds the cost of a model that reasons at length before answering.")
     if any_unpriced:
         print("Fill PRICES in scoring/config.py from each price page, with the date "
