@@ -22,8 +22,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-PROJECT = Path("/Users/newlivehung/Desktop/21. Sentient Futures Incubator")
-AUDIT = Path("/Users/newlivehung/Desktop/18. Yale DECS 2026")
+# The folder of this repository, found from the place of this file, so a clone
+# runs from any folder on any machine.
+PROJECT = Path(__file__).resolve().parents[1]
 
 # --- API keys --------------------------------------------------------------
 # Keys are read from PROJECT/.env, which .gitignore excludes, so a key is typed
@@ -58,6 +59,12 @@ def load_env(path: Path = ENV_FILE) -> list[str]:
 
 
 ENV_NAMES_READ = load_env()
+
+# The folder of the completed AI Moral Status Audit, a separate project. A line
+# AIMSA_DIR=<folder> in .env, or the same name in the environment, names the
+# folder, and without the line the folder is taken to be "18. Yale DECS 2026"
+# beside this repository, where the audit sits on the machine of Jason Hung.
+AUDIT = Path(os.environ.get("AIMSA_DIR") or PROJECT.parent / "18. Yale DECS 2026").expanduser()
 
 # Inherited inputs. Read only. Never written by this package.
 AUDIT_WIDE = AUDIT / "data" / "processed" / "AIMSA_analysis_wide.csv"
@@ -246,7 +253,8 @@ PRICES["claude_haiku_4_5"] = {"input": 1.00, "output": 5.00, "read_on": "2026-09
 # route, in both cases at the endpoint the pin in MODELS names. OpenRouter passes
 # the price of the developer through without a markup and charges a fee on buying
 # credit instead, which no price below includes. The prices read from the price
-# page of each developer on 2026-09-29 are kept in commit 5cddccd.
+# page of each developer on 2026-09-29 are kept in the commit titled "Price the
+# whole design from seven published price pages".
 
 # Claude Opus 5, endpoint anthropic. The batch endpoint is priced at half.
 PRICES["claude_opus_5"] = {"input": 5.00, "output": 25.00, "read_on": "2026-10-03"}

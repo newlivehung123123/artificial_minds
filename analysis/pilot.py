@@ -544,7 +544,9 @@ def g_tables(x: np.ndarray, pilot_x: np.ndarray) -> dict[str, list[dict]]:
 
 def _save(fig, stem: str) -> None:
     fig.savefig(OUT / f"{stem}.png", dpi=300, bbox_inches="tight")
-    fig.savefig(OUT / f"{stem}.pdf", bbox_inches="tight")
+    # A PDF stamps the time of writing unless told otherwise, and the stamp alone
+    # would make a rerun differ from the committed file by a single line.
+    fig.savefig(OUT / f"{stem}.pdf", bbox_inches="tight", metadata={"CreationDate": None})
     plt.close(fig)
 
 

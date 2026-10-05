@@ -2,12 +2,14 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+# The virtual environment the README creates inside the repository.
+.venv/
 
 # A ledger of real calls is the research record and is tracked, because every
-# Stage A decision has to be checkable against the responses that produced the
+# Stage A decision has to be checkable against the responses which produced the
 # decision. Stub output is never research data. A parse table is derived from a
 # ledger by `scoring.run reparse`, which calls no provider, so a parse table is
-# regenerated rather than stored.
+# regenerated and not stored.
 runs/stub_test.jsonl
 runs/stub_stage_b.jsonl
 runs/*.tmp
@@ -16,5 +18,5 @@ runs/*.parsed_v*.jsonl
 
 # A batch manifest beside a ledger of real calls is tracked with the ledger,
 # because the manifest is the only record of what was submitted and what
-# OpenRouter charged for each batch. A manifest beside a stub ledger is not tracked.
+# OpenRouter charged for every batch. A manifest beside a stub ledger is not tracked.
 runs/*stub*.batches.jsonl
