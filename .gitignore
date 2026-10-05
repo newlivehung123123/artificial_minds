@@ -20,3 +20,4 @@ runs/*.parsed_v*.jsonl
 # because the manifest is the only record of what was submitted and what
 # OpenRouter charged for every batch. A manifest beside a stub ledger is not tracked.
 runs/*stub*.batches.jsonl
+RESUME.md
