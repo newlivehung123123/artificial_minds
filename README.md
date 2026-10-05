@@ -42,6 +42,9 @@ them.
 | `scripts/00_select_pilot.py` | Reproduces the five pilot countries from the rule |
 | `data/records/` | One rendered administrative record per country, 122 files |
 | `runs/` | Append-only JSONL ledgers, one line per attempt, and beside a ledger of batch calls the manifest of every batch submitted |
+| `analysis/gstudy.py` | The variance decomposition, the generalisability coefficients and the decision study, with self-tests |
+| `analysis/pilot.py` | The pilot analysis of Stage B, which reads the ledgers and calls no provider |
+| `results/pilot/` | Every table, figure and summary the pilot analysis writes, with a `README.md` describing every file |
 
 ## Order of work
 
@@ -109,6 +112,14 @@ python -m scoring.run run --countries pilot --sleep 0.5 --spend-cap 5 --out runs
 python -m scoring.run batch-collect --out runs/stage_b.jsonl   # repeat until no batch is open
 python -m scoring.run report runs/stage_b.jsonl
 python -m scoring.run budget runs/stage_b.jsonl
+
+# 11. The pilot analysis of Stage B, which calls no provider and writes every
+#     table, figure and summary into results/pilot. The analysis also reads
+#     runs/stage_b_cap8000.jsonl, the checks of the cap of 8,000 output tokens,
+#     whose commands are in section 8 of RESUME.md. The first command runs the
+#     self-tests of the variance decomposition.
+python -m analysis.gstudy
+python -m analysis.pilot
 ```
 
 Stage A and Stage B never share a ledger. The harness refuses a run that names both a pilot model

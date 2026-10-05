@@ -864,6 +864,112 @@ tokens by 1.0 per cent. Against the 93,100 input tokens of the first pass, the r
 the corrected record and the score field together raise input tokens by 14.7 per cent, and the
 projection for Stage C in section 7.4 rises by the same fraction.
 
+### 7.7 What Stage B measured — 2026-10-05
+
+Stage B asked the six confirmatory models for 600 scores of the five pilot countries, under the two
+conditions, at temperature zero and at temperature one, with five calls for every country, model,
+condition and temperature, under instrument version v2. `python -m analysis.pilot` reads the
+ledgers, calls no provider and writes every table and figure into `results/pilot/`, where
+`summary.md` reports the five measures of section 7.2 in full and `README.md` describes every file.
+The file names and figure numbers below refer to `results/pilot/`. The scores of Gemini 3.1 Pro,
+DeepSeek V4 Pro and Kimi K3 come from `runs/stage_b_cap8000.jsonl`, where the three models were sent
+again at the cap of 8,000 output tokens which Stage C uses, and the scores of Claude Opus 5, GPT-5.6
+Sol and GLM-5.2 come from `runs/stage_b.jsonl`. Every figure below is a pilot figure on five
+countries, and no confirmatory analysis uses any of the figures.
+
+**At listed prices, 1,000 calls cost from 1.91 dollars on GLM-5.2 to 17.06 dollars on Kimi K3.**
+Under the two conditions together, 1,000 calls cost 4.22 dollars on Claude Opus 5, 3.44 on GPT-5.6
+Sol, 13.80 on Gemini 3.1 Pro, 8.48 on DeepSeek V4 Pro, 17.06 on Kimi K3 and 1.91 on GLM-5.2, from
+the mean input and output tokens the provider recorded over the 100 calls of every model, priced at
+the listed price `scoring/config.py` holds (`cost_per_call.csv`). The record condition cost more
+than training data alone on four models and less on GPT-5.6 Sol and Kimi K3, whose answers under the
+record condition were shorter by enough to outweigh the longer prompt, 179.4 output tokens per call
+against 301.9 under training data alone on GPT-5.6 Sol and 899.2 against 1,133.8 on Kimi K3.
+OpenRouter charged 50 per cent of the listed cost on GPT-5.6 Sol, 46 per cent on DeepSeek V4 Pro and
+from 93 to 100 per cent on the other four models. The listing of GPT-5.6 Sol marks a discount of 0.5
+on the batch route, which `scoring/config.py` never takes. `scoring/config.py` prices DeepSeek V4
+Pro at the higher of the two prices the listing gives, the price of two blocks of hours on weekdays,
+and every DeepSeek V4 Pro call used here was written on Saturday 2026-10-03. The study scores with
+one instrument, so cost by instrument has one level, and every model is pinned to one endpoint, so
+cost by model is cost by provider.
+
+**The 3,660 scores of the training condition in Stage C are projected at 28.77 dollars at listed
+prices.** Stage C sends every model 610 calls under every condition, 122 countries by five calls at
+temperature one, so the two conditions together come to 7,320 calls, projected at 59.68 dollars at
+listed prices, at 57.38 dollars from the calls at temperature one alone and at 50.40 dollars at the
+rate OpenRouter charged in Stage B (`stage_c_projection.csv`). The worst case, with every call
+writing the full output cap, is 395.31 dollars. Kimi K3 at 20.82 dollars and Gemini 3.1 Pro at 16.84
+dollars make up 63 per cent of the listed projection. Section 4.4 projected Stage C at 12.98 dollars
+from the 562 input and 84 output tokens per call which Claude Haiku 4.5 wrote in the third pass of
+Stage A, and in Stage B the six confirmatory models wrote a mean of 183.2 output tokens per call on
+Claude Opus 5 to 1,943.0 on DeepSeek V4 Pro, reasoning tokens included.
+
+**Of the 600 first answers in the ledgers the scores come from, 598 parsed as `ok`.** A first answer
+is the first attempt of a call which OpenRouter answered. The two first answers which failed were
+`empty` answers of Gemini 3.1 Pro which ended with the stop reason `error`, and both calls returned
+a score when sent again. No first answer in either ledger was `json_invalid`, `schema_violation` or
+`refusal` (`parse_outcomes.csv`). At the cap of 1,500 output tokens in `runs/stage_b.jsonl`, the
+first answer ended at the cap in seven calls of Gemini 3.1 Pro, 45 of DeepSeek V4 Pro and 15 of Kimi
+K3, the cuts section 7.3 records. The 100 transport errors of DeepSeek V4 Pro in
+`runs/stage_b.jsonl` are answers with status 404 from OpenRouter, because the privacy setting of the
+OpenRouter account excluded every paid endpoint which may train on the request, the pinned endpoint
+of DeepSeek V4 Pro included.
+
+**No model gave the same score in all five calls of every cell, at temperature zero or at
+temperature one.** A cell here means the five calls of one country, model, condition and
+temperature. Among the three models which take a temperature, Gemini 3.1 Pro varied least, with
+eight of 10 cells identical at temperature zero and a mean standard deviation (SD) of the five calls
+of a cell of 0.05 points, against 2.95 points on DeepSeek V4 Pro and 2.25 on GLM-5.2. Temperature
+one increased the mean SD of the three models to 1.03, 4.18 and 4.01 points in the same order
+(`replicate_spread.csv`, Figure 2). Claude Opus 5, GPT-5.6 Sol and Kimi K3 take no temperature at
+the pinned endpoints, so both runs of the three models ran at the default of the developer, with a
+mean SD of 5.92, 2.57 and 5.77 points in the run labelled temperature zero and 5.79, 3.62 and 5.90
+in the run labelled temperature one.
+
+**Two models returned an anchor score in most calls under training data alone.** The holistic
+wording anchors the scale at 0, 50 and 100 and asks for a decimal part wherever a whole number would
+hide a difference between two countries. Under training data alone, all 25 calls of Gemini 3.1 Pro
+returned an anchor score at both temperatures, and DeepSeek V4 Pro returned an anchor score in 21 of
+25 calls at temperature zero and 18 of 25 at temperature one, against no anchor score in any call of
+Claude Opus 5 or Kimi K3 (`score_values.csv`, Figure 1). Gemini 3.1 Pro gave France and India 50 and
+gave Ghana, Hong Kong and Barbados 0 in every call under training data alone, so the model sorted
+the five countries into two tied groups. The anchor of 0 reads "no law, no national strategy and no
+public institution bearing on the moral status of AI systems", and the anchor of 50 reads "has
+published a national strategy and has established at least one public institution with a standing
+remit over artificial intelligence, and has passed no law addressing the moral status of AI
+systems". Where the phrase "bearing on the moral status of AI systems" governs the strategy and the
+institution as well as the law, a country with a national AI strategy, an AI institution and nothing
+on moral status fits the anchor of 0 and the anchor of 50 at once. The ledger is consistent with the
+reading and does not test the reading.
+
+**Claude Opus 5 split France and India under the record condition.** At temperature one France
+received 52.5, 53.5, 53.5, 53.5 and 12.5, and India received 8.5, 48.6, 8.5, 7.5 and 12.5
+(`cells.csv`), and the high and the low calls of a cell cite the same facts of the record in
+`runs/stage_b.jsonl`. The reliability of one model with one call, the share of the variance of a
+single score of the model which comes from differences between countries, was 0.686 for Claude Opus
+5 under the record condition, the lowest of any model and condition, against 0.964 to 0.982 for the
+other five models under the record condition (`model_reliability.csv`).
+
+**On pilot data alone, Eρ² at six models with five calls per cell was 0.953 under training data
+alone, 0.988 under the record supplied and 0.981 for the two conditions together.** Eρ², the
+generalisability coefficient, is the share of the variance of averaged country scores which comes
+from differences between countries. Five countries give four degrees of freedom between countries,
+so the 95 per cent intervals are wide, 0.834 to 0.994, 0.959 to 0.999 and 0.934 to 0.998 in the same
+order (`g_coefficients.csv`). At one model and one call, the size of a single score, Eρ² was 0.693,
+0.886 and 0.859. The country took a share of 0.593 of the variance under training data alone and
+0.857 under the record supplied, and the country by the model, the component which measures how far
+the models disagree on the order of countries, took 0.154 and 0.048 (`g_components.csv`, Figure 3).
+Removing any one model moved Eρ² at six models by at most 0.015 under training data alone and by at
+most 0.006 in the other two designs (`leave_one_model_out.csv`). Figure 4 projects Eρ² to one to 12
+models (`d_study.csv`), and the dashed line at 0.80 marks a conventional reference alone, because
+item one of section 6.2 has still to name the target of the decision study. Section 4.4 requires the
+sentence below beside every generalisability coefficient the study reports.
+
+> The Digital Minds Research Sprint found a share of 0.876 of the variance separating one model from another in the combination of the model, the prompt format and the outcome, so a design with one wording cannot estimate how much the wording contributes, and the coefficient the study reports is optimistic by an unknown amount.
+
+**The analysis changes no FIXED section.** Section 4.4 fixes the holistic wording, and whether the
+anchor findings call for a new wording before Stage C is a decision for Jason Hung.
+
 ---
 
 ## 8. Deposit
@@ -903,3 +1009,4 @@ with the existing deposit without a schema change.
 | 2026-10-03 | Operational only, no design choice touched. A sync call now waits up to 600 seconds before the harness gives up, in place of 120 seconds, because a full answer of 8,000 tokens takes Kimi K3 about 260 seconds at the speed `runs/stage_b.jsonl` records. The OpenAI SDK, the software library that sends every OpenRouter call, no longer sends a call a second time after a timeout or a dropped connection. OpenRouter bills a call that is not streamed in full even when the answer never arrives, so one cell could have been paid for twice with one row in the ledger. A failed call is now sent again only by `--retry-failed`, and every attempt is one ledger row. |
 | 2026-10-04 | Operational, approved by Jason Hung. Gemini 3.1 Pro moved from the batch route to the sync route of OpenRouter at the same pin, `google-vertex/global`. The two Stage B batches of Gemini 3.1 Pro, submitted at 12:06 UTC on 2026-10-03, answered no request in more than 25 hours, while the four batches of Claude Opus 5 and GPT-5.6 Sol submitted in the same minute closed within 12 minutes, and the Batch API of OpenRouter has no call that cancels a batch. Section 4.1 names the new route. `batch-submit` refuses a model on the sync route, and `batch-collect` writes no batch result into a cell the ledger already holds an answer for, so a batch of Gemini 3.1 Pro that returns late changes no score. |
 | 2026-10-04 | Section 7.3 set to FIXED for the cap of output tokens of Gemini 3.1 Pro, decided by Jason Hung from the Stage B ledger `runs/stage_b.jsonl`, so the cap of every model is now FIXED. At the cap of 1,500, the cap cut seven of the 100 Stage B answers of Gemini 3.1 Pro, five under the training condition and two under the record condition. Gemini 3.1 Pro is sent at 8,000 output tokens with the other three models on the sync route, and the 100 Stage B cells of Gemini 3.1 Pro were called again at 8,000 into `runs/stage_b_cap8000.jsonl`. The check cut no answer. Two calls ended with the stop reason `error` and were not charged, and the two cells returned a score when called again, so all 100 cells of the check hold a score. |
+| 2026-10-05 | Section 7.7 added, holding the five measures of section 7.2 on the 600 scores of Stage B. `python -m analysis.pilot` reads the ledgers of Stage B, calls no provider and writes every table and figure into `results/pilot/`. On pilot data alone, Eρ² at six models with five calls per cell was 0.953 under training data alone and 0.988 under the record supplied, and the 3,660 scores of the training condition in Stage C are projected at 28.77 dollars at listed prices. Gemini 3.1 Pro returned 0 or 50 in every call under training data alone. No FIXED section changed. |

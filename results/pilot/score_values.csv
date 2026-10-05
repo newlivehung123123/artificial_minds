@@ -1,0 +1,29 @@
+stage,model,condition,temperature,temperature_applied,calls,distinct_scores,anchor_scores,lowest,highest
+B,Claude Opus 5,training,0.0,False,25,17,0,8.5,54.5
+B,Claude Opus 5,training,1.0,False,25,17,0,8.5,54.5
+B,Claude Opus 5,record,0.0,False,25,14,0,1.5,54.5
+B,Claude Opus 5,record,1.0,False,25,8,0,1.5,53.5
+B,GPT-5.6 Sol,training,0.0,False,25,13,5,2.5,52.0
+B,GPT-5.6 Sol,training,1.0,False,25,15,6,0.0,52.5
+B,GPT-5.6 Sol,record,0.0,False,25,17,0,1.2,51.2
+B,GPT-5.6 Sol,record,1.0,False,25,19,0,1.2,48.6
+B,Gemini 3.1 Pro,training,0.0,True,25,2,25,0.0,50.0
+B,Gemini 3.1 Pro,training,1.0,True,25,2,25,0.0,50.0
+B,Gemini 3.1 Pro,record,0.0,True,25,6,12,0.0,50.0
+B,Gemini 3.1 Pro,record,1.0,True,25,14,9,0.0,50.5
+B,DeepSeek V4 Pro,training,0.0,True,25,4,21,20.5,55.5
+B,DeepSeek V4 Pro,training,1.0,True,25,8,18,0.0,58.0
+B,DeepSeek V4 Pro,record,0.0,True,25,16,6,0.5,57.5
+B,DeepSeek V4 Pro,record,1.0,True,25,16,3,0.5,58.5
+B,Kimi K3,training,0.0,False,25,20,0,3.5,55.5
+B,Kimi K3,training,1.0,False,25,20,0,2.5,54.5
+B,Kimi K3,record,0.0,False,25,21,0,2.0,56.5
+B,Kimi K3,record,1.0,False,25,21,0,2.5,58.5
+B,GLM-5.2,training,0.0,True,25,8,3,5.0,50.0
+B,GLM-5.2,training,1.0,True,25,15,2,0.0,52.0
+B,GLM-5.2,record,0.0,True,25,9,0,1.5,53.0
+B,GLM-5.2,record,1.0,True,25,18,0,1.0,53.0
+A,Claude Haiku 4.5,training,0.0,True,25,7,0,5.0,38.5
+A,Claude Haiku 4.5,training,1.0,True,25,15,0,5.0,42.5
+A,Claude Haiku 4.5,record,0.0,True,25,4,0,2.5,42.3
+A,Claude Haiku 4.5,record,1.0,True,25,12,0,2.5,42.5

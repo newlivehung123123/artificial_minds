@@ -1,0 +1,15 @@
+stage,model,temperature,temperature_applied,cells,identical_cells,distinct_scores,mean_within_cell_sd,largest_within_cell_sd
+B,Claude Opus 5,0.0,False,10,1,24,5.920834,20.169854
+B,Claude Opus 5,1.0,False,10,1,22,5.787013,18.229098
+B,GPT-5.6 Sol,0.0,False,10,0,28,2.567535,7.250862
+B,GPT-5.6 Sol,1.0,False,10,0,30,3.620875,11.082644
+B,Gemini 3.1 Pro,0.0,True,10,8,6,0.054772,0.273861
+B,Gemini 3.1 Pro,1.0,True,10,5,14,1.030645,6.987489
+B,DeepSeek V4 Pro,0.0,True,10,3,18,2.952554,13.192801
+B,DeepSeek V4 Pro,1.0,True,10,2,22,4.180229,21.147104
+B,Kimi K3,0.0,False,10,0,36,5.770713,18.430952
+B,Kimi K3,1.0,False,10,0,33,5.903153,18.703609
+B,GLM-5.2,0.0,True,10,4,15,2.249851,9.338094
+B,GLM-5.2,1.0,True,10,0,27,4.00893,9.84251
+A,Claude Haiku 4.5,0.0,True,10,7,10,0.599728,2.738613
+A,Claude Haiku 4.5,1.0,True,10,2,23,3.291383,5.877925

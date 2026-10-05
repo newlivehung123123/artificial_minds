@@ -6,3 +6,8 @@ anthropic>=0.85
 openai>=1.109
 httpx>=0.28
 pandas>=2.2
+# The pilot analysis in analysis/ needs numpy and scipy for the variance
+# decomposition and matplotlib for the figures.
+numpy>=2.1
+scipy>=1.15
+matplotlib>=3.10

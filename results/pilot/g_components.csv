@@ -1,0 +1,17 @@
+design,component,key,variance,untruncated,share,ms,df,set_to_zero
+training,country,p,296.55778,296.55778,0.592532,9337.310233,4,no
+training,model,m,72.403967,72.403967,0.144665,2250.676,5,no
+training,country by model,pm,77.26146,77.26146,0.154371,440.576833,20,no
+training,replicate within cell,r:pm,54.269533,54.269533,0.108432,54.269533,120,no
+record,country,p,426.807726,426.807726,0.85677,12954.440185,4,no
+record,model,m,16.168067,16.168067,0.032456,554.41008,5,no
+record,country by model,pm,23.756323,23.756323,0.047688,150.208405,20,no
+record,replicate within cell,r:pm,31.42679,31.42679,0.063086,31.42679,120,no
+both,country,p,347.750758,347.750758,0.669547,21692.618384,4,no
+both,model,m,11.64148,11.64148,0.022414,1807.80048,5,no
+both,condition,c,20.05623,20.05623,0.038616,4423.68,1,no
+both,country by model,pm,22.844087,22.844087,0.043983,409.613054,20,no
+both,country by condition,pc,13.931995,13.931995,0.026824,599.132034,4,no
+both,model by condition,mc,32.644537,32.644537,0.062853,997.2856,5,no
+both,country by model by condition,pmc,27.664805,27.664805,0.053265,181.172184,20,no
+both,replicate within cell,r:pmc,42.848161,42.848161,0.082498,42.848161,240,no

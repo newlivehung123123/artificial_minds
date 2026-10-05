@@ -1,0 +1,10 @@
+design,setting,models,calls,erho2,phi,erho2_untruncated,lower_95,upper_95,interval
+training,"six models, five calls",6,5,0.952815,0.917252,0.952815,0.834161,0.994488,"exact, F on 20 and four degrees of freedom"
+training,"one model, five calls",1,5,0.770934,0.648813,0.770934,0.456026,0.967814,"exact, F on 20 and four degrees of freedom, converted to one model by the Spearman-Brown formula"
+training,"one model, one call",1,1,0.692748,0.592532,0.692748,,,"none, no exact interval when the number of calls changes"
+record,"six models, five calls",6,5,0.988405,0.982275,0.988405,0.959247,0.998645,"exact, F on 20 and four degrees of freedom"
+record,"one model, five calls",1,5,0.934242,0.902309,0.934242,0.796871,0.991927,"exact, F on 20 and four degrees of freedom, converted to one model by the Spearman-Brown formula"
+record,"one model, one call",1,1,0.88551,0.85677,0.88551,,,"none, no exact interval when the number of calls changes"
+both,"six models, five calls",6,5,0.981117,0.968631,0.981117,0.933633,0.997794,"exact, F on 20 and four degrees of freedom"
+both,"one model, five calls",1,5,0.896478,0.837303,0.896478,0.701014,0.986909,"exact, F on 20 and four degrees of freedom, converted to one model by the Spearman-Brown formula"
+both,"one model, one call",1,1,0.859258,0.804746,0.859258,,,"none, no exact interval when the number of calls changes"

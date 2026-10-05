@@ -1,0 +1,10 @@
+ledger,model,route,output_cap,attempts,transport_error_attempts,cells,cells_answered,first_ok,first_json_absent,first_json_invalid,first_schema_violation,first_refusal,first_empty,first_stop_length,first_stop_error,cells_scored_at_end,scores_used
+stage_b.jsonl,Claude Opus 5,batch,1500,100,0,100,100,100,0,0,0,0,0,0,0,100,yes
+stage_b.jsonl,GPT-5.6 Sol,batch,1500,100,0,100,100,100,0,0,0,0,0,0,0,100,yes
+stage_b.jsonl,Gemini 3.1 Pro,sync,1500,100,0,100,100,93,7,0,0,0,0,7,0,93,no
+stage_b.jsonl,DeepSeek V4 Pro,sync,1500,200,100,100,100,55,2,0,0,0,43,45,0,55,no
+stage_b.jsonl,Kimi K3,sync,1500,100,0,100,100,85,1,0,0,0,14,15,0,85,no
+stage_b.jsonl,GLM-5.2,sync,1500,100,0,100,100,100,0,0,0,0,0,0,0,100,yes
+stage_b_cap8000.jsonl,Gemini 3.1 Pro,sync,8000,102,0,100,100,98,0,0,0,0,2,0,2,100,yes
+stage_b_cap8000.jsonl,DeepSeek V4 Pro,sync,8000,100,0,100,100,100,0,0,0,0,0,0,0,100,yes
+stage_b_cap8000.jsonl,Kimi K3,sync,8000,100,0,100,100,100,0,0,0,0,0,0,0,100,yes
