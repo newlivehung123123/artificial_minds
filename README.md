@@ -42,7 +42,7 @@ The Sentience Readiness Index of Rost (2026) scores 30 countries, from 14.25 to 
 
 ### The audit and the count of national action
 
-The count of national action comes from the AI Moral Status Audit (AIMSA), an earlier project of Jason Hung which assembled national data on AI governance from public sources. The data of the audit are deposited at Harvard Dataverse, a public archive of research data run by Harvard University, under the digital object identifier (DOI) [10.7910/DVN/YQNFYI](https://doi.org/10.7910/DVN/YQNFYI). The count was computed by the program `scripts/10_action_index.py` of the audit. The count follows these rules.
+The count of national action comes from the AI Moral Status Audit (AIMSA), an earlier project of Jason Hung which assembled national data on AI governance from public sources. The data of the audit are deposited at Harvard Dataverse, a public archive of research data run by Harvard University, under the digital object identifier (DOI) [10.7910/DVN/YQNFYI](https://doi.org/10.7910/DVN/YQNFYI). The count was computed by the program `scripts/10_action_index.py` of the audit. The rules of the count are listed below.
 
 - The units are countries and territories, named by a three-letter country code. The European Union is dropped, because the European Union is not a country and every member state is present.
 - The measures fall into four blocks, namely governance, legislation, strategy and institutional readiness. Measures of attitude are excluded, because an attitude is not an act of government.
@@ -57,7 +57,7 @@ The deposit lacks two files the harness needs, namely the program `scripts/10_ac
 
 ### The correction of the strategy block
 
-The strategy block holds two measures, both from the Stanford AI Index. The first measure records whether a country released a national AI strategy, with one observation per country for 76 countries over 2017 to 2022, 62 at one and 14 at zero. The second measure is a score of alignment with the AI Principles of the Organisation for Economic Co-operation and Development (OECD), held for 55 countries, all in 2024. The alignment score measures the resemblance between the text of a national strategy and the text of the principles, so the score exists only where a strategy document exists.
+The strategy block holds two measures, the two from the Stanford AI Index. The first measure records whether a country released a national AI strategy, with one observation per country for 76 countries over 2017 to 2022, 62 at one and 14 at zero. The second measure is a score of alignment with the AI Principles of the Organisation for Economic Co-operation and Development (OECD), held for 55 countries, all in 2024. The alignment score measures the resemblance between the text of a national strategy and the text of the principles, so the score exists only where a strategy document exists.
 
 Of the 122 countries, 18 hold values which disagree. Five countries hold zero for release beside an alignment score, namely Belgium, Jordan, Morocco, Nigeria and Uzbekistan. A further 13 countries hold an alignment score and no observation of release, namely Burkina Faso, Bolivia, Ethiopia, Ghana, Kuwait, Lebanon, Mali, Malaysia, Nicaragua, Pakistan, Senegal, Taiwan and Uganda. The study sets release to one for all 18 countries, with no year written, and calls the rule the entailed policy. The study also reports a second rule, the contradictions policy. The year beside a zero is the year the source covers and not a year of publication, so a year is withheld for the 14 countries with a value of zero, namely Armenia, Azerbaijan, Belgium, Benin, Bahrain, Cuba, Iceland, Israel, Jordan, Morocco, Nigeria, New Zealand, Oman and Uzbekistan.
 
@@ -237,7 +237,7 @@ As Table 7 shows, the variation between the five calls of a combination differs 
 | Claude Haiku 4.5, third pass of Stage A | 0 | 7 | 10 | 0.60 | 2.74 |
 | Claude Haiku 4.5, third pass of Stage A | 1 | 2 | 23 | 3.29 | 5.88 |
 
-Claude Opus 5, GPT-5.6 Sol and Kimi K3 ran at the default temperature of the developer in both rows. At temperature one under training, Gemini 3.1 Pro returned 0 or 50 in 25 of 25 calls, 50 for France and India and 0 for Ghana, Hong Kong and Barbados. The largest standard deviation at temperature one came from DeepSeek V4 Pro for Barbados under training, with the five scores 0, 0, 15, 4 and 50.
+Claude Opus 5, GPT-5.6 Sol and Kimi K3 ran at the default temperature of the developer in the two rows of every model. At temperature one under training, Gemini 3.1 Pro returned 0 or 50 in 25 of 25 calls, 50 for France and India and 0 for Ghana, Hong Kong and Barbados. The largest standard deviation at temperature one came from DeepSeek V4 Pro for Barbados under training, with the five scores 0, 0, 15, 4 and 50.
 
 ![Figure 1. Scores at temperature one by country and model](results/pilot/fig1_scores.png)
 
@@ -245,7 +245,7 @@ Claude Opus 5, GPT-5.6 Sol and Kimi K3 ran at the default temperature of the dev
 
 In Figure 2, a combination above the dashed line varied more at temperature one.
 
-A generalisability study splits the variance of the scores into sources, here the country, the model, the call and the condition, and the interactions of the sources. The analysis uses the calls at temperature one, treats model and call as random, treats condition as fixed, and treats the country as the object of measurement. The coefficient Eρ² is the share of the variance of averaged scores coming from differences between countries, and serves the ordering of countries. The coefficient Φ serves the placing of a country on the scale, and counts the model effect as error, and in the design with two conditions also the interaction of model and condition, so Φ is never above Eρ². As Table 8 shows, the country is the largest source of variance in every design.
+A generalisability study splits the variance of the scores into sources, which in the study are the country, the model, the call and the condition, and the interactions of the sources of variance. The analysis uses the calls at temperature one, treats model and call as random, treats condition as fixed, and treats the country as the object of measurement. The coefficient Eρ² is the share of the variance of averaged scores coming from differences between countries, and serves the ordering of countries. The coefficient Φ serves the placing of a country on the scale, and counts the model effect as error, and in the design with two conditions also the interaction of model and condition, so Φ is never above Eρ². As Table 8 shows, the country is the largest source of variance in every design.
 
 **Table 8. Variance components at temperature one, with the share of the total in parentheses**
 
@@ -329,7 +329,7 @@ The listed projection takes the Stage B calls at the two temperatures. The colum
 
 ## State of the work on 5 October 2026
 
-`PLAN.md` is a DRAFT. Every item is labelled FIXED, OPEN or FROZEN, and no item is FROZEN yet. The two pilot stages and the pilot analysis are done. These items remain OPEN.
+`PLAN.md` is a DRAFT. Every item is labelled FIXED, OPEN or FROZEN, and no item is FROZEN yet. The two pilot stages and the pilot analysis are done. The items listed below remain OPEN.
 
 - Section 4.5, whether the three models which take no temperature run the combinations at temperature zero, because for the three models a call at temperature zero and the twin call at temperature one reach the endpoint as the same request.
 - Section 5, the exact schema and whether a refusal is treated as missing or as substantive for research question one. A non-`ok` answer is never replaced by a second attempt treated as the first.
@@ -377,7 +377,7 @@ The pinned versions of numpy, scipy and matplotlib need Python 3.10 or later, an
 
 ### Step 1.3. Install the libraries in a virtual environment
 
-A virtual environment is a folder, here `.venv`, which holds libraries for one project apart from the rest of the computer.
+A virtual environment is a folder, named `.venv` in Step 1.3, which holds the libraries of one project apart from other projects on the computer.
 
 ```bash
 python3 -m venv .venv
