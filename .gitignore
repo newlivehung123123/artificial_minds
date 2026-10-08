@@ -21,3 +21,4 @@ runs/*.parsed_v*.jsonl
 # OpenRouter charged for every batch. A manifest beside a stub ledger is not tracked.
 runs/*stub*.batches.jsonl
 RESUME.md
+PLAN_freeze_proposal.md

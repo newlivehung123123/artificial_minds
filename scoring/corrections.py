@@ -287,6 +287,73 @@ def action_index(policy: str = DEFAULT_POLICY) -> pd.Series:
     return score.dropna()
 
 
+def corrected_variants(policy: str = DEFAULT_POLICY) -> pd.DataFrame:
+    """The 20 constructions of the count, rebuilt under one correction policy.
+
+    The loop is the loop in main() of the audit's 10_action_index.py, calling the
+    audit's own build(), so policy "none" returns the deposited
+    AIMSA_action_variants.csv and any other policy differs from the deposited file
+    only by the correction. The 20 columns are the headline count, the 11 other
+    combinations of scaling and weighting, three cuts of the governance block,
+    four counts each built without one block, and a count restricted to the
+    countries holding three or more blocks. PLAN.md section 6.1 requires every
+    ranking claim to be reported across all 20 columns.
+    """
+    mod = _audit_index_module()
+    audit_config = sys.modules["config"]
+    long = corrected_long(policy)
+    act = mod.latest(long)
+    eligible = audit_config.eligible_units(long)
+    _, score, n_blocks, _ = mod.build(act, eligible)
+    variants = {"headline": score}
+    for how in mod.SCALINGS:
+        for weighting in mod.WEIGHTINGS:
+            if (how, weighting) == ("minmax", "equal"):
+                continue
+            variants[f"{how}_{weighting}"] = mod.build(act, eligible, how, weighting)[1]
+    for name, comps in mod.GOVERNANCE_CUTS.items():
+        if name == "gov_all":
+            continue
+        blocks = dict(audit_config.ACTION_BLOCKS, governance=comps)
+        variants[name] = mod.build(act, eligible, blocks=blocks)[1]
+    for drop in audit_config.ACTION_BLOCKS:
+        blocks = {k: v for k, v in audit_config.ACTION_BLOCKS.items() if k != drop}
+        variants[f"without_{drop}"] = mod.build(act, eligible, blocks=blocks)[1]
+    three_plus = set(n_blocks[n_blocks >= 3].index)
+    variants["three_or_more_blocks"] = mod.build(act, three_plus)[1].reindex(sorted(eligible))
+    out = pd.DataFrame(variants)
+    out.index.name = "ISO3"
+    return out
+
+
+def verify_variants() -> dict:
+    """Prove the variant rebuild reproduces the deposited variant file.
+
+    Returns the largest absolute difference in any of the 20 columns between the
+    rebuild under policy "none" and the deposited AIMSA_action_variants.csv, the
+    column holding that difference, the countries in the rebuild and the deposit,
+    and the countries made eligible by the default correction. A missing value
+    must sit in the same cell of both files, because the column
+    three_or_more_blocks is empty for every country holding fewer than three
+    blocks.
+    """
+    deposited = pd.read_csv(C.AUDIT_VARIANTS, dtype={"ISO3": str}).set_index("ISO3")
+    rebuilt = corrected_variants("none")
+    rebuilt = rebuilt.reindex(index=deposited.index, columns=deposited.columns)
+    gaps = (deposited - rebuilt).abs().max()
+    corrected = corrected_variants(DEFAULT_POLICY)
+    return {
+        "countries_deposited": len(deposited),
+        "countries_rebuilt": len(corrected_variants("none")),
+        "columns": list(deposited.columns),
+        "max_abs_difference": float(gaps.max()),
+        "worst_column": str(gaps.idxmax()),
+        "missing_cells_differ": int((deposited.isna() != rebuilt.isna()).sum().sum()),
+        "countries_corrected": len(corrected),
+        "made_eligible_by_correction": sorted(set(corrected.index) - set(deposited.index)),
+    }
+
+
 def verify() -> dict:
     """Prove the rebuild reproduces the deposited count before correcting anything.
 
@@ -352,6 +419,23 @@ if __name__ == "__main__":
             "count may be used anywhere until the difference is explained"
         )
     print("  the rebuild is the deposited count, so a corrected rebuild is comparable")
+
+    vcheck = verify_variants()
+    print()
+    print(f"Rebuilding the {len(vcheck['columns'])} deposited constructions of the count "
+          "with no correction applied")
+    print(f"  countries compared            {vcheck['countries_deposited']}")
+    print(f"  largest absolute difference   {vcheck['max_abs_difference']:.10f}"
+          f" (column {vcheck['worst_column']})")
+    print(f"  missing cells that differ     {vcheck['missing_cells_differ']}")
+    print(f"  countries after correction    {vcheck['countries_corrected']}")
+    if (vcheck["max_abs_difference"] > 1e-9 or vcheck["missing_cells_differ"]
+            or vcheck["made_eligible_by_correction"]):
+        raise SystemExit(
+            "the variant rebuild does not reproduce the deposited variant file, or "
+            "the correction changes which countries are eligible, so no corrected "
+            "construction may be used until the difference is explained"
+        )
 
     cleared = years_cleared()
     print()
